@@ -1,38 +1,22 @@
 // This file should be named 'script.js' and placed in the same folder as your index.html file.
 
-// FIX: Updated Firebase SDK version to 11.10.1 for better stability and to resolve import issues.
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.10.1/firebase-app.js";
-import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.10.1/firebase-auth.js";
+import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.10.1/firebase-auth.js";
 import { getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, onSnapshot, collection, query, where, addDoc, getDocs, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.10.1/firebase-firestore.js";
 
-document.addEventListener('DOMContentLoaded', async () => {
-    // Confirm that the script has loaded and is running
+document.addEventListener('DOMContentLoaded', () => {
     console.log("ChatAgad script loaded successfully.");
 
-    // --- Firebase Initialization and Auth ---
-    // This is your Firebase project's configuration.
-    // The getAnalytics and measurementId are not needed for this app's current functionality.
-    const firebaseConfig = {
-        apiKey: "AIzaSyALyckXNK7FbzpqZGP4Lr5eVRQJVseh0fQ",
-        authDomain: "chatagad-app.firebaseapp.com",
-        projectId: "chatagad-app",
-        storageBucket: "chatagad-app.firebasestorage.app",
-        messagingSenderId: "946806283279",
-        appId: "1:946806283279:web:78ad7293e5a0a2017dd77a",
-        measurementId: "G-7J5TKXQB1X"
-    };
-
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
-    const auth = getAuth(app);
+    // --- Firebase Global Variables (declared but not initialized yet) ---
+    let app = null;
+    let db = null;
+    let auth = null;
     const appId = "chatagad-app"; // Using the projectId as a unique identifier
 
     let userId = null;
     let unsubscribeFromChat = null;
     let unsubscribeFromMatching = null;
-
-    // Show the user ID for debugging and connection
-    const userIdDisplay = document.getElementById('user-id-display');
+    let isFirebaseInitialized = false;
 
     // --- DOM Elements ---
     const homePage = document.getElementById('home-page');
@@ -53,84 +37,32 @@ document.addEventListener('DOMContentLoaded', async () => {
     const commonInterestsDisplay = document.getElementById('common-interests-display');
     const quickMessagesContainer = document.getElementById('quick-messages');
 
-    // Disable the start button initially to prevent race conditions with authentication
-    startBtn.disabled = true;
-
-    // Authenticate the user. If an auth token is provided, use it. Otherwise, sign in anonymously.
-    try {
-        const initialAuthToken = null; // In a real environment, this might come from a server
-        if (initialAuthToken) {
-            await signInWithCustomToken(auth, initialAuthToken);
-        } else {
-            await signInAnonymously(auth);
-        }
-    } catch (error) {
-        console.error("Firebase Auth Error:", error);
-    }
-    
-    // Listen for auth state changes to get the userId and proceed
-    auth.onAuthStateChanged(user => {
-        if (user) {
-            userId = user.uid;
-            userIdDisplay.textContent = `Your User ID: ${userId}`;
-            // Remove the line that was making the user ID visible on the homepage
-            console.log(`User authenticated with ID: ${userId}`);
-            // Enable the start button once authenticated
-            startBtn.disabled = false;
-        } else {
-            userId = null;
-            userIdDisplay.classList.add('hidden');
-            console.log("User not authenticated.");
-            startBtn.disabled = true;
-        }
-    });
-
-    // --- Firestore Collection Paths ---
-    // We use a public collection path for matching and chats so users can find each other.
-    const matchingCollectionRef = collection(db, `artifacts/${appId}/public/data/matching_queue`);
-    const chatsCollectionRef = collection(db, `artifacts/${appId}/public/data/chats`);
-
-    // --- State and Data ---
-    let currentInterests = [];
+    // --- Firestore Collection Paths (will be initialized after Firebase) ---
+    let matchingCollectionRef;
+    let chatsCollectionRef;
     let currentChatId = null;
 
+    // Disable the start button initially to prevent race conditions with authentication
+    startBtn.disabled = false;
+
     // --- Utility Functions ---
-    /**
-     * Shows a hidden element by removing the 'hidden' class.
-     * @param {HTMLElement} element - The DOM element to show.
-     */
     function show(element) {
         element.classList.remove('hidden');
     }
 
-    /**
-     * Hides an element by adding the 'hidden' class.
-     * @param {HTMLElement} element - The DOM element to hide.
-     */
     function hide(element) {
         element.classList.add('hidden');
     }
     
-    /**
-     * Saves the user's interests to localStorage for persistence.
-     * @param {Array<string>} interests - The array of interests to save.
-     */
     function saveInterests(interests) {
         localStorage.setItem('userInterests', JSON.stringify(interests));
     }
 
-    /**
-     * Loads the user's interests from localStorage.
-     * @returns {Array<string>} The array of saved interests, or an empty array.
-     */
     function loadInterests() {
         const interestsString = localStorage.getItem('userInterests');
         return interestsString ? JSON.parse(interestsString) : [];
     }
 
-    /**
-     * Renders the user's interests as clickable bubbles on the home page.
-     */
     function renderInterests() {
         console.log('Rendering interests:', currentInterests);
         const existingBubbles = interestContainer.querySelectorAll('.interest-bubble');
@@ -155,16 +87,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    /**
-     * Adds a new message to the chat display.
-     * @param {string} senderId - The ID of the sender.
-     * @param {string} text - The content of the message.
-     */
     function addMessage(senderId, text) {
         const messageDiv = document.createElement('div');
         messageDiv.classList.add('message');
         
-        // Add a data attribute to store the sender ID, which is a key fix
         messageDiv.setAttribute('data-sender-id', senderId);
 
         if (senderId === userId) {
@@ -179,19 +105,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         chatBox.scrollTop = chatBox.scrollHeight;
     }
 
-    /**
-     * Renders the common interests and quick messages when a chat starts.
-     * @param {Array<string>} interests - The list of common interests.
-     */
     function renderChatUI(interests) {
-        // Display common interests
         if (interests.length > 0) {
             commonInterestsDisplay.innerHTML = `<p>You both like: <span class="font-semibold text-gray-800">${interests.join(', ')}</span></p>`;
         } else {
             commonInterestsDisplay.innerHTML = `<p>You're chatting with a random stranger.</p>`;
         }
 
-        // Render quick message bubbles
         quickMessagesContainer.innerHTML = '';
         const defaultMessages = ['Hi', 'Hello', 'How are you?'];
         const interestMessages = interests.map(i => `What's your favorite thing about ${i}?`);
@@ -208,10 +128,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    /**
-     * Listens for changes to the chat document and updates the UI.
-     * @param {string} chatId - The ID of the chat document.
-     */
     function listenForChatChanges(chatId) {
         console.log(`Setting up listener for chat ID: ${chatId}`);
         const chatDocRef = doc(chatsCollectionRef, chatId);
@@ -219,15 +135,13 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (docSnap.exists()) {
                 const chatData = docSnap.data();
                 
-                // If the chat has been ended by the other user, both clients will see this status.
-                // The cleanup is handled immediately by both clients independently.
                 if (chatData.status === 'ended') {
                     console.log(`Chat document ${chatId} status is 'ended'. Ending chat gracefully.`);
                     handleChatEnded();
                     return;
                 }
 
-                chatBox.innerHTML = ''; // Clear existing messages
+                chatBox.innerHTML = '';
                 renderChatUI(chatData.commonInterests || []);
 
                 const chatMessages = chatData.messages || [];
@@ -235,62 +149,77 @@ document.addEventListener('DOMContentLoaded', async () => {
                     addMessage(msg.senderId, msg.text);
                 });
             } else {
-                // If the chat document is already deleted, the chat has ended
                 console.log(`Chat document ${chatId} no longer exists. Ending chat.`);
                 handleChatEnded();
             }
         }, (error) => {
             console.error("Error listening to chat:", error);
-            // Even if there's a listener error, attempt to clean up
             handleChatEnded();
         });
     }
 
-    /**
-     * Handles the logic for starting a new chat session.
-     */
-    async function startChat() {
-        console.log("Start Chat button clicked.");
-        if (!userId) {
-            console.error("User not authenticated.");
-            return;
-        }
+    async function initializeFirebaseAndAuth() {
+        if (isFirebaseInitialized) return;
 
-        hide(homePage);
-        show(chatPage);
-        chatBox.innerHTML = `<p class="text-sm text-gray-500 text-center">Searching for a stranger...</p>`;
-
+        const firebaseConfig = {
+            apiKey: "AIzaSyALyckXNK7FbzpqZGP4Lr5eVRQJVseh0fQ",
+            authDomain: "chatagad-app.firebaseapp.com",
+            projectId: "chatagad-app",
+            storageBucket: "chatagad-app.firebasestorage.app",
+            messagingSenderId: "946806283279",
+            appId: "1:946806283279:web:78ad7293e5a0a2017dd77a",
+            measurementId: "G-7J5TKXQB1X"
+        };
+        
         try {
-            // First, check if the current user is already in the queue
-            const currentUserInQueueDoc = await getDoc(doc(matchingCollectionRef, userId));
-            if (currentUserInQueueDoc.exists()) {
-                 console.log("User is already in the queue. Waiting for a match...");
-                 return; // Do nothing if the user is already waiting.
-            }
-            
-            // Look for a match in the queue
+            app = initializeApp(firebaseConfig);
+            db = getFirestore(app);
+            auth = getAuth(app);
+            matchingCollectionRef = collection(db, `artifacts/${appId}/public/data/matching_queue`);
+            chatsCollectionRef = collection(db, `artifacts/${appId}/public/data/chats`);
+            isFirebaseInitialized = true;
+
+            await signInAnonymously(auth);
+
+            auth.onAuthStateChanged(user => {
+                if (user) {
+                    userId = user.uid;
+                    console.log(`User authenticated with ID: ${userId}`);
+                    findMatchOrAddToQueue();
+                } else {
+                    userId = null;
+                    console.log("User not authenticated.");
+                    chatBox.innerHTML = `<p class="text-sm text-red-500 text-center">Authentication failed. Please try again.</p>`;
+                }
+            });
+        } catch (error) {
+            console.error("Firebase Initialization or Auth Error:", error);
+            chatBox.innerHTML = `<p class="text-sm text-red-500 text-center">Connection failed. Please check your internet connection.</p>`;
+        }
+    }
+
+    async function findMatchOrAddToQueue() {
+        try {
             console.log("Searching for an available match...");
             const q = query(matchingCollectionRef);
             const querySnapshot = await getDocs(q);
             let matchedUserDoc = null;
             let commonInterests = [];
 
-            // Find the first user in the queue that is not the current user
             querySnapshot.forEach(docSnap => {
                 if (docSnap.id !== userId) {
                     const matchedUserInterests = docSnap.data().interests || [];
                     commonInterests = currentInterests.filter(interest => matchedUserInterests.includes(interest));
                     if (commonInterests.length > 0 || (currentInterests.length === 0 && matchedUserInterests.length === 0)) {
-                         if (!matchedUserDoc) {
-                             matchedUserDoc = docSnap;
-                         }
+                        if (!matchedUserDoc) {
+                            matchedUserDoc = docSnap;
+                        }
                     }
                 }
             });
 
             if (matchedUserDoc) {
                 console.log("Match found! Creating a new chat.");
-                // A match was found, create a new chat document
                 const newChatDoc = doc(chatsCollectionRef);
                 currentChatId = newChatDoc.id;
 
@@ -298,7 +227,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     users: [userId, matchedUserDoc.id],
                     commonInterests: commonInterests,
                     createdAt: serverTimestamp(),
-                    status: 'active', // FIX: Add a status field to the chat document.
+                    status: 'active',
                     messages: [{
                         senderId: 'system',
                         text: "You're now connected with a stranger. Say hello!",
@@ -308,19 +237,15 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 await setDoc(newChatDoc, chatData);
 
-                // Delete both users from the matching queue
                 await deleteDoc(doc(matchingCollectionRef, matchedUserDoc.id));
-                // We'll also check if our user document exists in the queue and delete it if so.
                 const currentUserDocInQueue = await getDoc(doc(matchingCollectionRef, userId));
                 if (currentUserDocInQueue.exists()) {
                     await deleteDoc(doc(matchingCollectionRef, userId));
                 }
                 listenForChatChanges(currentChatId);
                 console.log(`Chat started with ${matchedUserDoc.id}. Chat ID: ${currentChatId}`);
-
             } else {
                 console.log("No match found. Adding user to queue and listening for a match.");
-                // No match found, so add the current user to the queue
                 const userDocRef = doc(matchingCollectionRef, userId);
                 await setDoc(userDocRef, {
                     userId: userId,
@@ -330,16 +255,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                 });
                 console.log(`User ${userId} added to matching queue.`);
 
-                // Listen for a chat to be created for this user
                 unsubscribeFromMatching = onSnapshot(query(chatsCollectionRef, where('users', 'array-contains', userId)), (querySnap) => {
                     querySnap.forEach(docSnap => {
                         const chatData = docSnap.data();
                         if (chatData.users.includes(userId)) {
-                            // Match found!
                             currentChatId = docSnap.id;
                             console.log(`Matched! Chat ID: ${currentChatId}`);
                             listenForChatChanges(currentChatId);
-                            // Unsubscribe from the matching queue listener
                             if (unsubscribeFromMatching) {
                                 unsubscribeFromMatching();
                                 unsubscribeFromMatching = null;
@@ -350,16 +272,31 @@ document.addEventListener('DOMContentLoaded', async () => {
                     console.error("Error listening for match:", error);
                 });
             }
-
         } catch (error) {
             console.error("Error starting chat:", error);
             handleChatEnded();
         }
     }
 
-    /**
-     * Sends a message to the active chat session.
-     */
+
+    async function startChat() {
+        console.log("Start Chat button clicked.");
+
+        hide(homePage);
+        show(chatPage);
+        chatBox.innerHTML = `<p class="text-sm text-gray-500 text-center">
+            <span class="inline-block animate-spin rounded-full h-4 w-4 border-b-2 border-gray-900 mr-2"></span>
+            Connecting and searching...
+        </p>`;
+
+        if (!isFirebaseInitialized) {
+            await initializeFirebaseAndAuth();
+        } else if (userId) {
+            findMatchOrAddToQueue();
+        }
+    }
+
+
     async function sendMessage() {
         if (!currentChatId || !userId) return;
 
@@ -367,7 +304,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (message) {
             const chatDocRef = doc(chatsCollectionRef, currentChatId);
             try {
-                // Fetch the current messages to append the new message to.
                 const chatDoc = await getDoc(chatDocRef);
                 if (chatDoc.exists()) {
                     const currentMessages = chatDoc.data().messages || [];
@@ -385,10 +321,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
-    /**
-     * Ends the current chat session by updating the chat document's status.
-     * The final deletion is handled by the `onSnapshot` listener.
-     */
     async function endChat() {
         if (!currentChatId) {
             handleChatEnded();
@@ -397,23 +329,17 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         try {
             const chatDocRef = doc(chatsCollectionRef, currentChatId);
-            // Update the status to 'ended'. The onSnapshot listener will handle the final deletion.
             await updateDoc(chatDocRef, {
                 status: 'ended',
                 endedAt: serverTimestamp()
             });
             console.log(`Chat ${currentChatId} status updated to 'ended'.`);
-            // FIX: Immediately call handleChatEnded() to clean up the client-side state
-            // without waiting for the onSnapshot listener to fire.
             handleChatEnded();
         } catch (error) {
             console.error("Error ending chat:", error);
         }
     }
 
-    /**
-     * Resets the UI and state after a chat has ended.
-     */
     function handleChatEnded() {
         if (unsubscribeFromChat) {
             console.log("Unsubscribing from chat listener.");
@@ -435,15 +361,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // --- Event Handlers ---
     function handleInterestInput(e) {
-        // FIX: Using keyup and a more robust check for input value to create bubbles.
-        console.log("Interest field keyup event fired. Key:", e.key);
         if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault();
             const interest = interestInputField.value.trim().toLowerCase();
             if (interest && interest.length > 0 && !currentInterests.includes(interest)) {
                 currentInterests.push(interest);
                 saveInterests(currentInterests);
-                console.log("Interest added:", interest);
                 renderInterests();
                 interestInputField.value = '';
             }
@@ -474,6 +397,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     // Initial setup on page load
-    currentInterests = loadInterests();
+    let currentInterests = loadInterests();
     renderInterests();
+    show(homePage); // Show the initial home page on load
 });
