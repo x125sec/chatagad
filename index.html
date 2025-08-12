@@ -228,19 +228,31 @@
             let unsubscribeFromChat = null;
             let unsubscribeFromQueue = null;
 
-            // --- IMPORTANT: FIREBASE CONFIGURATION (Using environment variables) ---
-            let firebaseConfig = {};
+            // --- IMPORTANT: FIREBASE CONFIGURATION ---
+            const firebaseConfig = {
+                apiKey: "AIzaSyALyckXNK7FbzpqZGP4Lr5eVRQJVseh0fQ",
+                authDomain: "chatagad-app.firebaseapp.com",
+                projectId: "chatagad-app",
+                storageBucket: "chatagad-app.firebasestorage.app",
+                messagingSenderId: "946806283279",
+                appId: "1:946806283279:web:78ad7293e5a0a2017dd77a",
+                measurementId: "G-7J5TKXQB1X"
+            };
+
             let initialAuthToken = null;
             let appId = 'default-app-id';
 
+            // The try-catch block for the Canvas environment is now commented out
+            // because we are using a hardcoded configuration.
+            /*
             try {
-                // Safely access the platform variables
                 firebaseConfig = JSON.parse(__firebase_config);
                 initialAuthToken = __initial_auth_token;
                 appId = __app_id;
             } catch (e) {
-                console.warn("Platform variables (__firebase_config, __initial_auth_token, __app_id) not found. Using default values.");
+                console.warn("Using hardcoded Firebase config.");
             }
+            */
 
             // --- DOM Elements ---
             const homePage = document.getElementById('home-page');
