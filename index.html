@@ -228,18 +228,8 @@
             let unsubscribeFromChat = null;
             let unsubscribeFromQueue = null;
 
-            // --- IMPORTANT: FIREBASE CONFIGURATION ---
-            const userConfig = {
-                apiKey: "AIzaSyALyckXNK7FbzpqZGP4Lr5eVRQJVseh0fQ",
-                authDomain: "chatagad-app.firebaseapp.com",
-                projectId: "chatagad-app",
-                storageBucket: "chatagad-app.firebasestorage.app",
-                messagingSenderId: "946806283279",
-                appId: "1:946806283279:web:78ad7293e5a0a2017dd77a",
-                measurementId: "G-7J5TKXQB1X"
-            };
-
-            const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : userConfig;
+            // --- IMPORTANT: FIREBASE CONFIGURATION (Using environment variables) ---
+            const firebaseConfig = JSON.parse(__firebase_config);
             const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
             const appId = typeof __app_id !== 'undefined' ? __app_id : firebaseConfig.projectId;
 
@@ -344,7 +334,7 @@
                     auth = getAuth(app);
                     db = getFirestore(app);
 
-                    // Sign in the user
+                    // Sign in the user using the provided custom token or anonymously
                     if (initialAuthToken) {
                         await signInWithCustomToken(auth, initialAuthToken);
                     } else {
@@ -636,13 +626,7 @@
             nextBtn.addEventListener('click', () => { endChat(true); startChat(); });
             
             // Initial setup
-            if (Object.keys(firebaseConfig).length > 0) {
-                initializeFirebase();
-            } else {
-                console.error("Firebase config is missing. Please add it to the code.");
-                startBtn.innerText = "Firebase not configured";
-                startBtn.disabled = true;
-            }
+            initializeFirebase();
         });
     </script>
 </body>
