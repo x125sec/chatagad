@@ -455,35 +455,33 @@
                         let matchedUserDoc = null;
                         let sharedInterests = [];
 
+                        // Fetch all documents in the matching queue
+                        const querySnapshot = await transaction.get(matchingCollectionRef);
+
                         // 1. Try to find a match based on interests first
                         if (interests.length > 0) {
-                            const q = query(matchingCollectionRef, where('interests', 'array-contains-any', interests));
-                            const querySnapshot = await transaction.get(q);
-
-                            querySnapshot.forEach(docSnap => {
+                            for (const docSnap of querySnapshot.docs) {
                                 if (docSnap.id !== userId) {
-                                    matchedUserDoc = docSnap;
                                     const matchedUserInterests = docSnap.data().interests || [];
-                                    sharedInterests = interests.filter(interest => matchedUserInterests.includes(interest));
-                                    // Take the first match and break
-                                    return;
+                                    const hasCommonInterest = interests.some(interest => matchedUserInterests.includes(interest));
+                                    if (hasCommonInterest) {
+                                        matchedUserDoc = docSnap;
+                                        sharedInterests = interests.filter(interest => matchedUserInterests.includes(interest));
+                                        break; // Found a match, exit loop
+                                    }
                                 }
-                            });
+                            }
                         }
 
-                        // 2. If no interest-based match, or if no interests, find any random user
+                        // 2. If no interest-based match, find any random user
                         if (!matchedUserDoc) {
-                            const q = query(matchingCollectionRef, where('chatId', '==', null)); // Find users who are actively waiting
-                            const querySnapshot = await transaction.get(q);
-
-                            querySnapshot.forEach(docSnap => {
-                                if (docSnap.id !== userId) {
+                            for (const docSnap of querySnapshot.docs) {
+                                if (docSnap.id !== userId && docSnap.data().chatId === null) {
                                     matchedUserDoc = docSnap;
                                     sharedInterests = [];
-                                    // Take the first match and break
-                                    return;
+                                    break; // Found a match, exit loop
                                 }
-                            });
+                            }
                         }
 
                         if (matchedUserDoc) {
