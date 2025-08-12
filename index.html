@@ -348,6 +348,8 @@
                             startBtn.disabled = false;
                             userIdDisplay.innerText = `User ID: ${userId}`;
                             console.log("User authenticated with UID:", user.uid);
+                            // New logic: Check for an existing match right after authentication
+                            checkExistingMatch();
                         } else {
                             userId = null;
                             isAuthReady = false;
@@ -430,6 +432,36 @@
                     console.error("Error listening to match status:", error);
                     endChat(false);
                 });
+            };
+
+            const checkExistingMatch = async () => {
+                if (!isAuthReady) return;
+                const matchingCollectionRef = collection(db, `artifacts/${appId}/public/data/matching_queue`);
+                const userDocRef = doc(matchingCollectionRef, userId);
+                
+                try {
+                    const docSnap = await getDoc(userDocRef);
+                    if (docSnap.exists()) {
+                        const userData = docSnap.data();
+                        if (userData.chatId) {
+                            console.log("Found an existing match for user:", userId);
+                            currentChatId = userData.chatId;
+                            commonInterests = userData.commonInterests || [];
+                            hide(homePage);
+                            show(chatPage);
+                            startChatListener(currentChatId);
+                            sendBtn.disabled = false;
+                            return;
+                        }
+                    }
+                    // If no match is found, show the home page and clear any listeners
+                    hide(chatPage);
+                    show(homePage);
+                    if (unsubscribeFromChat) unsubscribeFromChat();
+                    if (unsubscribeFromQueue) unsubscribeFromQueue();
+                } catch (error) {
+                    console.error("Error checking for existing match:", error);
+                }
             };
 
             const findMatchOrAddToQueue = async () => {
@@ -540,14 +572,13 @@
                 const chatsCollectionRef = collection(db, `artifacts/${appId}/public/data/chats`);
                 const chatDocRef = doc(chatsCollectionRef, currentChatId);
                 try {
-                    // Use arrayUnion to atomically append the new message to the array
                     await updateDoc(chatDocRef, {
                         messages: arrayUnion({
                             senderId: userId,
                             text: chatInput.value.trim(),
-                            timestamp: Date.now() // Use a client-side timestamp
+                            timestamp: Date.now()
                         }),
-                        lastMessageAt: serverTimestamp() // Add a top-level timestamp for correct sorting
+                        lastMessageAt: serverTimestamp()
                     });
                     chatInput.value = '';
                 } catch (error) {
