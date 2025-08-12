@@ -219,18 +219,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (docSnap.exists()) {
                 const chatData = docSnap.data();
                 
-                // This is the key change: When a user ends a chat, the other user's
-                // onSnapshot listener will detect the status change. The user with
-                // the "smaller" ID is designated to perform the final deletion. This
-                // prevents a race condition where both clients try to delete the doc.
+                // If the chat has been ended by the other user, both clients will see this status.
+                // The cleanup is handled immediately by both clients independently.
                 if (chatData.status === 'ended') {
                     console.log(`Chat document ${chatId} status is 'ended'. Ending chat gracefully.`);
-                    const chatUsers = chatData.users || [];
-                    const ownerId = chatUsers.sort()[0]; // Determine the owner
-                    if (userId === ownerId) {
-                        console.log("Current user is the chat owner. Deleting the chat document.");
-                        deleteDoc(doc(chatsCollectionRef, chatId)).catch(err => console.error("Error deleting chat doc:", err));
-                    }
                     handleChatEnded();
                     return;
                 }
@@ -411,6 +403,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 endedAt: serverTimestamp()
             });
             console.log(`Chat ${currentChatId} status updated to 'ended'.`);
+            // FIX: Immediately call handleChatEnded() to clean up the client-side state
+            // without waiting for the onSnapshot listener to fire.
+            handleChatEnded();
         } catch (error) {
             console.error("Error ending chat:", error);
         }
