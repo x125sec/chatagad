@@ -229,9 +229,18 @@
             let unsubscribeFromQueue = null;
 
             // --- IMPORTANT: FIREBASE CONFIGURATION (Using environment variables) ---
-            const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
-            const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-            const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+            let firebaseConfig = {};
+            let initialAuthToken = null;
+            let appId = 'default-app-id';
+
+            try {
+                // Safely access the platform variables
+                firebaseConfig = JSON.parse(__firebase_config);
+                initialAuthToken = __initial_auth_token;
+                appId = __app_id;
+            } catch (e) {
+                console.warn("Platform variables (__firebase_config, __initial_auth_token, __app_id) not found. Using default values.");
+            }
 
             // --- DOM Elements ---
             const homePage = document.getElementById('home-page');
