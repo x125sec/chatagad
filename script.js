@@ -31,37 +31,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Show the user ID for debugging and connection
     const userIdDisplay = document.getElementById('user-id-display');
 
-    // Authenticate the user. If an auth token is provided, use it. Otherwise, sign in anonymously.
-    try {
-        const initialAuthToken = null; // In a real environment, this might come from a server
-        if (initialAuthToken) {
-            await signInWithCustomToken(auth, initialAuthToken);
-        } else {
-            await signInAnonymously(auth);
-        }
-    } catch (error) {
-        console.error("Firebase Auth Error:", error);
-    }
-    
-    // Listen for auth state changes to get the userId and proceed
-    auth.onAuthStateChanged(user => {
-        if (user) {
-            userId = user.uid;
-            userIdDisplay.textContent = `Your User ID: ${userId}`;
-            userIdDisplay.classList.remove('hidden');
-            console.log(`User authenticated with ID: ${userId}`);
-        } else {
-            userId = null;
-            userIdDisplay.classList.add('hidden');
-            console.log("User not authenticated.");
-        }
-    });
-
-    // --- Firestore Collection Paths ---
-    // We use a public collection path for matching and chats so users can find each other.
-    const matchingCollectionRef = collection(db, `artifacts/${appId}/public/data/matching_queue`);
-    const chatsCollectionRef = collection(db, `artifacts/${appId}/public/data/chats`);
-
     // --- DOM Elements ---
     const homePage = document.getElementById('home-page');
     const chatPage = document.getElementById('chat-page');
@@ -80,6 +49,43 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     const commonInterestsDisplay = document.getElementById('common-interests-display');
     const quickMessagesContainer = document.getElementById('quick-messages');
+
+    // Disable the start button initially to prevent race conditions with authentication
+    startBtn.disabled = true;
+
+    // Authenticate the user. If an auth token is provided, use it. Otherwise, sign in anonymously.
+    try {
+        const initialAuthToken = null; // In a real environment, this might come from a server
+        if (initialAuthToken) {
+            await signInWithCustomToken(auth, initialAuthToken);
+        } else {
+            await signInAnonymously(auth);
+        }
+    } catch (error) {
+        console.error("Firebase Auth Error:", error);
+    }
+    
+    // Listen for auth state changes to get the userId and proceed
+    auth.onAuthStateChanged(user => {
+        if (user) {
+            userId = user.uid;
+            userIdDisplay.textContent = `Your User ID: ${userId}`;
+            // Remove the line that was making the user ID visible on the homepage
+            console.log(`User authenticated with ID: ${userId}`);
+            // Enable the start button once authenticated
+            startBtn.disabled = false;
+        } else {
+            userId = null;
+            userIdDisplay.classList.add('hidden');
+            console.log("User not authenticated.");
+            startBtn.disabled = true;
+        }
+    });
+
+    // --- Firestore Collection Paths ---
+    // We use a public collection path for matching and chats so users can find each other.
+    const matchingCollectionRef = collection(db, `artifacts/${appId}/public/data/matching_queue`);
+    const chatsCollectionRef = collection(db, `artifacts/${appId}/public/data/chats`);
 
     // --- State and Data ---
     let currentInterests = [];
@@ -232,6 +238,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         if (!userId) {
             console.error("User not authenticated.");
+            // This case should not be reached because the button is disabled, but it's a good safety check.
             return;
         }
 
