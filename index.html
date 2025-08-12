@@ -229,9 +229,9 @@
             let unsubscribeFromQueue = null;
 
             // --- IMPORTANT: FIREBASE CONFIGURATION (Using environment variables) ---
-            const firebaseConfig = JSON.parse(__firebase_config);
+            const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
             const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-            const appId = typeof __app_id !== 'undefined' ? __app_id : firebaseConfig.projectId;
+            const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
             // --- DOM Elements ---
             const homePage = document.getElementById('home-page');
