@@ -1,0 +1,137 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+/* General body styling and font import */
+body {
+    font-family: 'Inter', sans-serif;
+    background-color: #f3f4f6;
+}
+
+/* The main container for the app, with fluid width and centering */
+.container {
+    max-width: 800px;
+    margin: 0 auto;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+}
+
+/* Styles for the chat message display area */
+.chat-box {
+    height: 60vh;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 1rem;
+    background-color: #ffffff;
+    border-bottom: 1px solid #e5e7eb;
+    scrollbar-width: thin;
+    scrollbar-color: #d1d5db #f3f4f6;
+}
+
+/* Custom scrollbar for WebKit browsers */
+.chat-box::-webkit-scrollbar {
+    width: 8px;
+}
+.chat-box::-webkit-scrollbar-track {
+    background: #f3f4f6;
+}
+.chat-box::-webkit-scrollbar-thumb {
+    background-color: #d1d5db;
+    border-radius: 4px;
+}
+
+/* Individual message bubble styling */
+.message {
+    max-width: 75%;
+    padding: 0.75rem 1rem;
+    border-radius: 1.5rem;
+    word-wrap: break-word;
+}
+.message-me {
+    background-color: #6366f1;
+    color: white;
+    align-self: flex-end;
+    border-bottom-right-radius: 0.5rem;
+}
+.message-stranger {
+    background-color: #e5e7eb;
+    color: #1f2937;
+    align-self: flex-start;
+    border-bottom-left-radius: 0.5rem;
+}
+
+/* Modal overlay to darken the background */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 100;
+}
+
+/* Styling for the interest input container and bubbles */
+#interest-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    padding: 0.75rem;
+    border: 1px solid #d1d5db;
+    border-radius: 0.5rem;
+    background-color: #ffffff;
+    align-items: center;
+}
+.interest-bubble {
+    background-color: #e5e7eb;
+    color: #1f2937;
+    padding: 0.25rem 0.75rem;
+    border-radius: 9999px;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+.remove-interest {
+    background-color: transparent;
+    border: none;
+    cursor: pointer;
+    color: #4b5563;
+    font-weight: bold;
+    font-size: 0.875rem;
+    line-height: 1;
+    padding: 0 0.25rem;
+}
+.remove-interest:hover {
+    color: #1f2937;
+}
+
+/* Input field inside the bubble container */
+.interest-input-field {
+    flex-grow: 1;
+    border: none;
+    outline: none;
+    padding: 0;
+    background-color: transparent;
+}
+
+/* NEW: Styles for the clickable message bubbles */
+.quick-message-bubble {
+    background-color: #cbd5e1;
+    color: #1e293b;
+    padding: 0.5rem 1rem;
+    border-radius: 9999px;
+    font-size: 0.875rem;
+    cursor: pointer;
+    border: none;
+    transition: background-color 0.2s ease;
+}
+.quick-message-bubble:hover {
+    background-color: #94a3b8;
+}
