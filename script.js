@@ -9,14 +9,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     console.log("ChatAgad script loaded successfully.");
 
     // --- Firebase Initialization and Auth ---
-    // Your web app's Firebase configuration - Replace this with your own!
+    // This is your Firebase project's configuration.
+    // The getAnalytics and measurementId are not needed for this app's current functionality.
     const firebaseConfig = {
         apiKey: "AIzaSyALyckXNK7FbzpqZGP4Lr5eVRQJVseh0fQ",
         authDomain: "chatagad-app.firebaseapp.com",
         projectId: "chatagad-app",
         storageBucket: "chatagad-app.firebasestorage.app",
         messagingSenderId: "946806283279",
-        appId: "1:946806283279:web:78ad7293e5a0a2017dd77a"
+        appId: "1:946806283279:web:78ad7293e5a0a2017dd77a",
+        measurementId: "G-7J5TKXQB1X"
     };
 
     const app = initializeApp(firebaseConfig);
