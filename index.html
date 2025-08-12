@@ -375,6 +375,7 @@
                             return;
                         }
                         
+                        // Clear existing messages and render new ones
                         chatBox.innerHTML = '';
                         (chatData.messages || []).forEach(msg => addMessage(msg.senderId, msg.text));
                         
@@ -392,7 +393,7 @@
                     endChat(false);
                 });
             };
-            
+
             const listenForMatchStatus = () => {
                 console.log("Listening for match status for user:", userId);
                 const matchingCollectionRef = collection(db, `artifacts/${appId}/public/data/matching_queue`);
@@ -417,17 +418,16 @@
                             if (unsubscribeFromQueue) unsubscribeFromQueue();
                             
                             // Transition to chat page and start the main chat listener
+                            hide(chatHeader);
+                            show(chatPage);
                             startChatListener(currentChatId);
                             sendBtn.disabled = false;
                         }
                     } else {
-                        // This means the user's queue document was deleted (by a matching user)
-                        // This listener will only be active if the user is in the queue, so it means a match was made
-                        // However, the other user's transaction may have created the chat and deleted this doc
-                        // before the other doc was updated. So we must now check for the new chat
-                        console.log("User queue document was deleted, likely by a matching user.");
+                        console.log("User queue document was deleted. This means a match was made by another user's transaction.");
                         if (unsubscribeFromQueue) unsubscribeFromQueue();
-                        // Let's rely on the chat listener in the `findMatchOrAddToQueue` logic now.
+                        // At this point, a chat doc should exist. We don't need to do anything here.
+                        // The user's other listener should pick up the new chat.
                     }
                 }, (error) => {
                     console.error("Error listening to match status:", error);
@@ -503,10 +503,18 @@
                             });
                         }
                     });
+                    
+                    // After the transaction, start the listener. If a match was found, the listener will
+                    // immediately see the chatId and transition to chat. If not, it will wait.
+                    if (currentChatId) {
+                        startChatListener(currentChatId);
+                    } else {
+                        listenForMatchStatus();
+                    }
                 } catch (error) {
                     console.error("Transaction failed:", error);
-                    // This could be due to a concurrency conflict, so just try again
-                    findMatchOrAddToQueue();
+                    // This could be due to a concurrency conflict, so we can retry after a short delay
+                    setTimeout(() => findMatchOrAddToQueue(), 1000);
                 }
             };
             
@@ -515,9 +523,6 @@
                 hide(homePage);
                 show(chatPage);
                 chatBox.innerHTML = '';
-                
-                // Start listening for a match *before* attempting to find one
-                listenForMatchStatus();
                 findMatchOrAddToQueue();
             };
 
