@@ -227,10 +227,18 @@
             let commonInterests = [];
             let unsubscribeFromChat = null;
 
-            // --- Constants from the Canvas environment ---
-            const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
-            const appId = typeof __app_id !== 'undefined' ? __app_id : firebaseConfig.projectId;
-            const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+            // --- IMPORTANT: FIREBASE CONFIGURATION ---
+            const firebaseConfig = {
+                apiKey: "AIzaSyALyckXNK7FbzpqZGP4Lr5eVRQJVseh0fQ",
+                authDomain: "chatagad-app.firebaseapp.com",
+                projectId: "chatagad-app",
+                storageBucket: "chatagad-app.firebasestorage.app",
+                messagingSenderId: "946806283279",
+                appId: "1:946806283279:web:78ad7293e5a0a2017dd77a"
+            };
+
+            const initialAuthToken = null;
+            const appId = firebaseConfig.projectId;
 
             // --- DOM Elements ---
             const homePage = document.getElementById('home-page');
@@ -554,7 +562,13 @@
             nextBtn.addEventListener('click', () => { endChat(true); startChat(); });
             
             // Initial setup
-            initializeFirebase();
+            if (Object.keys(firebaseConfig).length > 0) {
+                initializeFirebase();
+            } else {
+                console.error("Firebase config is missing. Please add it to the code.");
+                startBtn.innerText = "Firebase not configured";
+                startBtn.disabled = true;
+            }
         });
     </script>
 </body>
