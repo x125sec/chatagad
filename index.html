@@ -4,9 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ChatAgad | Omegle-Style Chat</title>
-    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Inter Font -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -317,18 +315,9 @@
                 measurementId: "G-7J5TKXQB1X"
             };
 
-            const appId = 'default-app-id';
-
             // --- DOM Elements ---
             const homePage = document.getElementById('home-page');
             const chatPage = document.getElementById('chat-page');
-            const userIdDisplay = document.getElementById('user-id-display');
-            const chatHeader = document.getElementById('chat-header');
-            const chatBox = document.getElementById('chat-box');
-            const chatInput = document.getElementById('chat-input');
-            const sendBtn = document.getElementById('send-btn');
-            const disconnectBtn = document.getElementById('disconnect-btn');
-            const newChatBtn = document.getElementById('new-chat-btn');
             const statusText = document.getElementById('status-text');
             const commonInterestsEl = document.getElementById('common-interests');
             const connectionCount = document.getElementById('connection-count');
@@ -336,6 +325,11 @@
             const interestInput = document.getElementById('interest-input');
             const interestsDisplay = document.getElementById('interests-display');
             const startBtn = document.getElementById('start-btn');
+            const chatBox = document.getElementById('chat-box');
+            const chatInput = document.getElementById('chat-input');
+            const sendBtn = document.getElementById('send-btn');
+            const disconnectBtn = document.getElementById('disconnect-btn');
+            const newChatBtn = document.getElementById('new-chat-btn');
 
             // --- Utility Functions ---
             const show = (element) => element.classList.remove('hidden');
@@ -348,11 +342,18 @@
             };
 
             const loadInterests = () => {
-                const savedInterests = localStorage.getItem('chatInterests');
-                if (savedInterests) {
-                    interests = JSON.parse(savedInterests);
-                    renderInterests();
+                try {
+                    const savedInterests = localStorage.getItem('chatInterests');
+                    if (savedInterests) {
+                        interests = JSON.parse(savedInterests);
+                    } else {
+                        interests = [];
+                    }
+                } catch (e) {
+                    console.error("Error loading interests:", e);
+                    interests = [];
                 }
+                renderInterests();
             };
             
             const renderInterests = () => {
