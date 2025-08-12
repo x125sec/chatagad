@@ -239,7 +239,7 @@
                 measurementId: "G-7J5TKXQB1X"
             };
 
-            const appId = 'default-app-id'; // You can't use the canvas ID, so we use a default
+            const appId = 'default-app-id';
 
             // --- DOM Elements ---
             const homePage = document.getElementById('home-page');
@@ -275,7 +275,6 @@
             };
 
             const renderInterests = () => {
-                // Clear existing bubbles but keep the input field
                 const existingBubbles = Array.from(interestContainer.children).filter(el => el.id !== 'interest-input');
                 existingBubbles.forEach(bubble => bubble.remove());
                 
@@ -291,11 +290,9 @@
             };
 
             const handleInterestAdd = (e) => {
-                // Check for 'Enter' or 'Space' key press
                 if (e.key === 'Enter' || e.key === ' ') {
                     e.preventDefault();
                     const newInterest = interestInput.value.trim();
-                    // Ensure the interest is not empty and not a duplicate
                     if (newInterest && !interests.includes(newInterest)) {
                         saveInterests([...interests, newInterest]);
                         interestInput.value = '';
@@ -342,10 +339,8 @@
                     auth = getAuth(app);
                     db = getFirestore(app);
 
-                    // Sign in the user anonymously for the public website
                     await signInAnonymously(auth);
 
-                    // Set up the authentication state change listener
                     onAuthStateChanged(auth, user => {
                         if (user) {
                             userId = user.uid;
@@ -379,11 +374,10 @@
                         console.log("Chat document updated:", chatData);
                         if (chatData.status === 'ended') {
                             console.log("Chat ended by other user.");
-                            endChat(false); // Do not delete the chat if it was ended by the other user
+                            endChat(false);
                             return;
                         }
                         
-                        // Clear existing messages and render new ones
                         chatBox.innerHTML = '';
                         (chatData.messages || []).forEach(msg => addMessage(msg.senderId, msg.text));
                         
@@ -394,7 +388,7 @@
                         renderQuickMessages();
                     } else {
                         console.log("Chat document does not exist. Ending chat.");
-                        endChat(false); // End the chat locally if the doc is deleted by other user
+                        endChat(false);
                     }
                 }, (error) => {
                     console.error("Error listening to chat:", error);
@@ -407,7 +401,6 @@
                 const matchingCollectionRef = collection(db, `artifacts/${appId}/public/data/matching_queue`);
                 const userDocRef = doc(matchingCollectionRef, userId);
                 
-                // Detach any existing listener before attaching a new one
                 if (unsubscribeFromQueue) {
                     unsubscribeFromQueue();
                     unsubscribeFromQueue = null;
@@ -422,10 +415,8 @@
                             currentChatId = userData.chatId;
                             commonInterests = userData.commonInterests || [];
                             
-                            // Detach the queue listener as we are now in a chat
                             if (unsubscribeFromQueue) unsubscribeFromQueue();
                             
-                            // Transition to chat page and start the main chat listener
                             hide(homePage);
                             show(chatPage);
                             startChatListener(currentChatId);
@@ -434,7 +425,6 @@
                     } else {
                         console.log("User queue document was deleted. This means a match was made by another user's transaction.");
                         if (unsubscribeFromQueue) unsubscribeFromQueue();
-                        // The other user's listener should have picked up the new chat. We don't need to do anything else.
                     }
                 }, (error) => {
                     console.error("Error listening to match status:", error);
@@ -454,7 +444,6 @@
                 const matchingCollectionRef = collection(db, `artifacts/${appId}/public/data/matching_queue`);
                 const chatsCollectionRef = collection(db, `artifacts/${appId}/public/data/chats`);
 
-                // First, find a potential match outside the transaction.
                 let potentialMatchRef = null;
                 let sharedInterests = [];
                 
@@ -464,7 +453,6 @@
                     
                     if (docs.length > 0) {
                         if (interests.length > 0) {
-                            // Find a match by interests first
                             for (const docSnap of docs) {
                                 const matchedUserInterests = docSnap.data().interests || [];
                                 const hasCommonInterest = interests.some(interest => matchedUserInterests.includes(interest));
@@ -476,25 +464,21 @@
                             }
                         }
 
-                        // If no interest match, pick the first available random person
                         if (!potentialMatchRef) {
                             potentialMatchRef = docs[0].ref;
                             sharedInterests = [];
                         }
                     }
 
-                    // Now, run the transaction to either claim the match or add to the queue.
                     await runTransaction(db, async (transaction) => {
                         if (potentialMatchRef) {
-                            // We have a candidate, check if they are still available
                             const potentialMatchDoc = await transaction.get(potentialMatchRef);
 
                             if (potentialMatchDoc.exists() && potentialMatchDoc.data().chatId === null) {
-                                // Success! Claim the match.
                                 const newChatRef = doc(chatsCollectionRef);
                                 const newChatId = newChatRef.id;
 
-                                // Create the new chat document
+                                // The fix: Removed the `timestamp: serverTimestamp()` from the message object.
                                 transaction.set(newChatRef, {
                                     users: [userId, potentialMatchDoc.id],
                                     commonInterests: sharedInterests,
@@ -506,10 +490,8 @@
                                     }]
                                 });
 
-                                // Update our queue document with the new chatId
                                 transaction.set(doc(matchingCollectionRef, userId), { chatId: newChatId, commonInterests: sharedInterests, status: 'matched', userId: userId, interests: interests, createdAt: serverTimestamp()});
 
-                                // Delete the matched user's queue document
                                 transaction.delete(potentialMatchRef);
 
                                 currentChatId = newChatId;
@@ -517,13 +499,10 @@
                                 console.log("Match successfully claimed in transaction with user:", potentialMatchDoc.id);
 
                             } else {
-                                // Race condition: The candidate was claimed by someone else. Abort and let the outer function retry.
                                 console.warn("Race condition detected: Match was already taken. Aborting transaction.");
-                                // The transaction will automatically retry if this happens, so we don't need to do anything here.
                                 throw new Error("Match already claimed.");
                             }
                         } else {
-                            // No potential match found, so just add this user to the queue
                             const userDocRef = doc(matchingCollectionRef, userId);
                             transaction.set(userDocRef, {
                                 userId: userId,
@@ -544,7 +523,6 @@
 
                 } catch (error) {
                     console.error("Transaction failed:", error);
-                    // If the transaction failed due to a race condition (or anything else), let's retry
                     console.log("Retrying match search after a short delay...");
                     setTimeout(() => findMatchOrAddToQueue(), 500);
                 }
@@ -599,7 +577,6 @@
                     }
                 }
                 
-                // Clean up local state
                 currentChatId = null;
                 commonInterests = [];
                 hide(chatPage);
@@ -607,7 +584,6 @@
                 hide(confirmationModal);
                 sendBtn.disabled = false;
                 
-                // Clean up user from the matching queue if they're there
                 const matchingCollectionRef = collection(db, `artifacts/${appId}/public/data/matching_queue`);
                 try {
                     const userDocRef = doc(matchingCollectionRef, userId);
@@ -634,7 +610,6 @@
             cancelEndBtn.addEventListener('click', () => hide(confirmationModal));
             nextBtn.addEventListener('click', () => { endChat(true); startChat(); });
             
-            // Initial setup
             initializeFirebase();
         });
     </script>
