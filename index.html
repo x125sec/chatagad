@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ChatAgad | Chat with Strangers</title>
+    <title>ChatAgad | Omegle-Style Chat</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Inter Font -->
@@ -13,8 +13,10 @@
     <style>
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #f3f4f6;
+            background-color: #0f172a;
+            color: #f1f5f9;
             transition: all 0.3s ease-in-out;
+            overflow: hidden;
         }
         .container {
             max-width: 800px;
@@ -28,20 +30,15 @@
         }
         .app-card {
             width: 100%;
-            background-color: #ffffff;
+            background-color: #1e293b;
             border-radius: 1rem;
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -2px rgba(0, 0, 0, 0.2);
             overflow: hidden;
             display: flex;
             flex-direction: column;
-            height: 90vh; /* Set a fixed height for mobile devices */
+            height: 90vh;
             max-height: 90vh;
-        }
-        @media (min-width: 640px) {
-            .app-card {
-                height: auto;
-                min-height: 700px;
-            }
+            border: 1px solid #334155;
         }
         .chat-box {
             flex-grow: 1;
@@ -51,7 +48,7 @@
             display: flex;
             flex-direction: column;
             gap: 0.5rem;
-            background-color: #f9fafb;
+            background-color: #0f172a;
         }
         .message {
             max-width: 75%;
@@ -61,58 +58,26 @@
             animation: fadeIn 0.3s ease-out;
         }
         .message-me {
-            background-color: #6366f1;
+            background-color: #3b82f6;
             color: white;
             align-self: flex-end;
             border-bottom-right-radius: 0.5rem;
         }
         .message-stranger {
-            background-color: #e5e7eb;
-            color: #1f2937;
+            background-color: #334155;
+            color: #f1f5f9;
             align-self: flex-start;
             border-bottom-left-radius: 0.5rem;
         }
-        .modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.5);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 100;
-        }
-        #interest-container {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.5rem;
-            padding: 0.75rem;
-            border: 1px solid #d1d5db;
-            border-radius: 0.5rem;
-            background-color: #ffffff;
-            align-items: center;
-            min-height: 48px;
-        }
         .interest-bubble {
-            background-color: #e5e7eb;
-            color: #1f2937;
+            background-color: #3b82f6;
+            color: white;
             padding: 0.25rem 0.75rem;
             border-radius: 9999px;
             display: flex;
             align-items: center;
             gap: 0.25rem;
-        }
-        .remove-interest {
-            background-color: transparent;
-            border: none;
-            cursor: pointer;
-            color: #4b5563;
-            font-weight: bold;
-            font-size: 0.875rem;
-            line-height: 1;
-            padding: 0 0.25rem;
+            font-weight: 500;
         }
         .interest-input-field {
             flex-grow: 1;
@@ -120,14 +85,98 @@
             outline: none;
             padding: 0;
             background-color: transparent;
+            color: white;
+        }
+        .spinner {
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            100% { transform: rotate(360deg); }
         }
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(10px); }
             to { opacity: 1; transform: translateY(0); }
         }
+        .btn-primary {
+            background: linear-gradient(to right, #3b82f6, #6366f1);
+            color: white;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.3), 0 2px 4px -1px rgba(59, 130, 246, 0.2);
+        }
+        .btn-secondary {
+            background-color: #334155;
+            color: #f1f5f9;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+        .btn-secondary:hover {
+            background-color: #475569;
+        }
+        .btn-danger {
+            background-color: #ef4444;
+            color: white;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+        .btn-danger:hover {
+            background-color: #dc2626;
+        }
+        .stranger-status {
+            background-color: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 0.5rem;
+            padding: 0.5rem 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .status-indicator {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+        .status-connecting {
+            background-color: #f59e0b;
+            animation: pulse 1.5s infinite;
+        }
+        .status-connected {
+            background-color: #10b981;
+        }
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        .disconnect-animation {
+            animation: disconnect 0.5s forwards;
+        }
+        @keyframes disconnect {
+            0% { opacity: 1; transform: scale(1); }
+            100% { opacity: 0; transform: scale(0.9); }
+        }
+        .typing-dot {
+            height: 8px;
+            width: 8px;
+            background-color: #cbd5e1;
+            border-radius: 50%;
+            display: inline-block;
+            margin: 0 2px;
+            animation: typing 1.4s infinite ease-in-out both;
+        }
+        .typing-dot:nth-child(1) { animation-delay: -0.32s; }
+        .typing-dot:nth-child(2) { animation-delay: -0.16s; }
+        @keyframes typing {
+            0%, 80%, 100% { transform: scale(0.6); }
+            40% { transform: scale(1); }
+        }
     </style>
 </head>
-<body class="bg-gray-100">
+<body>
 
     <!-- Main Application Container -->
     <div class="container">
@@ -136,78 +185,105 @@
         <div class="app-card">
             
             <!-- Header -->
-            <header class="p-4 bg-gray-800 text-white rounded-t-xl flex justify-between items-center">
-                <h1 class="text-2xl font-bold">ChatAgad</h1>
-                <span id="user-id-display" class="text-sm text-gray-400"></span>
+            <header class="p-4 bg-slate-800 text-white flex justify-between items-center border-b border-slate-700">
+                <h1 class="text-2xl font-bold flex items-center gap-2">
+                    <span class="text-blue-400">Chat</span><span class="text-cyan-400">Agad</span>
+                </h1>
+                <div class="text-sm text-slate-400">
+                    <span id="connection-count">0</span> users online
+                </div>
             </header>
 
             <!-- Home Page: Set Interests -->
             <div id="home-page" class="flex flex-col flex-grow p-6 transition-all duration-300 ease-in-out">
-                <h2 class="text-3xl font-bold text-center text-gray-800 mb-4">Find a Stranger</h2>
-                <p class="text-center text-gray-600 mb-6">Enter interests below and press space/enter, or leave blank to chat with a random stranger.</p>
+                <div class="text-center mb-8">
+                    <h2 class="text-3xl font-bold text-white mb-2">Chat with Strangers</h2>
+                    <p class="text-slate-400">Talk anonymously with random people around the world</p>
+                </div>
                 
-                <div class="flex-grow">
-                    <label for="interest-input" class="block text-sm font-medium text-gray-700 mb-2">Your Interests</label>
-                    <div id="interest-container">
-                        <input type="text" id="interest-input" class="interest-input-field" placeholder="e.g., coding, movies, books">
+                <div class="flex-grow flex flex-col justify-center">
+                    <div class="mb-8">
+                        <h3 class="text-xl font-semibold text-white mb-4">Your Interests (Optional)</h3>
+                        <p class="text-slate-400 mb-4">Add interests to match with people who share similar interests</p>
+                        
+                        <div id="interest-container" class="mb-4 p-3 bg-slate-800 rounded-lg border border-slate-700">
+                            <input type="text" id="interest-input" class="interest-input-field placeholder-slate-500" placeholder="Type an interest and press Enter...">
+                        </div>
+                        
+                        <div id="interests-display" class="flex flex-wrap gap-2">
+                            <!-- Interests will appear here -->
+                        </div>
+                    </div>
+                    
+                    <div class="mt-6">
+                        <button id="start-btn" class="start-btn w-full py-4 px-6 btn-primary rounded-lg shadow-lg text-lg font-bold">
+                            Start Chatting
+                        </button>
                     </div>
                 </div>
 
-                <button class="start-btn w-full py-4 px-6 mt-6 bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-semibold rounded-lg shadow-md hover:from-indigo-600 hover:to-purple-700 transition-colors duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed">
-                    Start Chat
-                </button>
+                <div class="mt-8 text-center text-slate-500 text-sm">
+                    <p>By starting a chat, you agree to our <a href="#" class="text-blue-400 hover:underline">Community Guidelines</a></p>
+                </div>
             </div>
 
             <!-- Chat Page -->
             <div id="chat-page" class="hidden flex-col flex-grow transition-all duration-300 ease-in-out">
-                <div id="chat-header" class="p-3 bg-purple-100 text-purple-800 text-sm text-center font-medium shadow-sm">
-                    <!-- Common interests or loader will go here -->
+                <div id="chat-header" class="p-3 bg-slate-800 text-slate-300 text-center font-medium border-b border-slate-700 flex items-center justify-center gap-2">
+                    <div class="stranger-status">
+                        <span class="status-indicator status-connecting"></span>
+                        <span id="status-text">Connecting to stranger...</span>
+                    </div>
                 </div>
                 
                 <div id="chat-box" class="chat-box flex-grow">
-                    <!-- Chat messages will be appended here -->
+                    <div class="flex-1 flex flex-col items-center justify-center text-center p-4">
+                        <div class="mb-6">
+                            <div class="relative inline-block">
+                                <div class="w-16 h-16 rounded-full bg-slate-800 flex items-center justify-center mb-4 mx-auto">
+                                    <svg class="spinner w-10 h-10 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                </div>
+                            </div>
+                            <h3 class="text-xl font-bold text-white mb-2">Looking for someone you can talk to...</h3>
+                            <p class="text-slate-400">Please wait while we connect you with a stranger</p>
+                        </div>
+                        <div id="common-interests" class="mt-4 flex flex-wrap gap-2 justify-center"></div>
+                    </div>
                 </div>
                 
-                <div class="p-4 bg-white border-t border-gray-200">
-                    <div id="quick-messages" class="flex flex-wrap gap-2 mb-3">
-                        <!-- Quick message buttons here -->
-                    </div>
+                <div class="p-4 bg-slate-800 border-t border-slate-700">
                     <div class="flex space-x-2">
-                        <input type="text" id="chat-input" class="flex-grow px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Type a message...">
-                        <button id="send-btn" class="px-6 py-3 bg-indigo-500 text-white font-semibold rounded-lg shadow-md hover:bg-indigo-600 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed">
+                        <input type="text" id="chat-input" class="flex-grow px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white" placeholder="Type your message..." disabled>
+                        <button id="send-btn" class="px-6 py-3 bg-slate-700 text-white font-semibold rounded-lg hover:bg-slate-600 transition-colors disabled:opacity-50" disabled>
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                                <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 00.183 1.018l.256.257a1 1 0 001.018.183L12 14.5l6.561 3.52a1 1 0 00.902-.128l.255-.257a1 1 0 00.183-1.018l-7-14z" />
                                 <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 00.183 1.018l.256.257a1 1 0 001.018.183L12 14.5l6.561 3.52a1 1 0 00.902-.128l.255-.257a1 1 0 00.183-1.018l-7-14z" />
                             </svg>
                         </button>
                     </div>
                 </div>
-                <div class="p-4 bg-white border-t border-gray-200 flex justify-end gap-2 shadow-sm">
-                    <button id="end-chat-btn" class="py-2 px-4 bg-red-500 text-white font-semibold rounded-lg shadow-md hover:bg-red-600 transition-colors">
-                        End Chat
+                <div class="p-4 bg-slate-800 border-t border-slate-700 flex justify-center gap-4">
+                    <button id="disconnect-btn" class="py-2 px-6 btn-danger rounded-lg font-semibold flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M3 5a2 2 0 012-2h10a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V5zm11 1H6v8l4-2 4 2V6z" clip-rule="evenodd" />
+                        </svg>
+                        Disconnect
                     </button>
-                    <button id="next-btn" class="py-2 px-4 bg-gray-500 text-white font-semibold rounded-lg shadow-md hover:bg-gray-600 transition-colors">
-                        Next
+                    <button id="new-chat-btn" class="py-2 px-6 btn-secondary rounded-lg font-semibold flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clip-rule="evenodd" />
+                        </svg>
+                        New Chat
                     </button>
                 </div>
             </div>
 
         </div>
 
-        <!-- Confirmation Modal -->
-        <div id="confirmation-modal" class="modal-overlay hidden">
-            <div class="w-full max-w-sm p-8 bg-white rounded-xl shadow-2xl text-center">
-                <h3 class="text-2xl font-bold text-gray-800 mb-4">End Chat?</h3>
-                <p class="text-gray-600 mb-6">Are you sure you want to end this conversation?</p>
-                <div class="flex justify-center space-x-4">
-                    <button id="confirm-end-btn" class="px-6 py-2 bg-red-500 text-white font-semibold rounded-lg hover:bg-red-600 transition-colors">
-                        Yes, End
-                    </button>
-                    <button id="cancel-end-btn" class="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors">
-                        No, Continue
-                    </button>
-                </div>
-            </div>
+        <div class="mt-6 text-center text-slate-500 text-sm">
+            <p>ChatAgad &copy; 2023 | Chat anonymously with people around the world</p>
         </div>
 
     </div>
@@ -227,13 +303,15 @@
             let commonInterests = [];
             let unsubscribeFromChat = null;
             let unsubscribeFromQueue = null;
+            let onlineUsers = Math.floor(Math.random() * 1000) + 500;
+            let strangerIsTyping = false;
 
-            // --- IMPORTANT: FIREBASE CONFIGURATION (Hardcoded for deployment) ---
+            // --- Firebase Configuration ---
             const firebaseConfig = {
                 apiKey: "AIzaSyALyckXNK7FbzpqZGP4Lr5eVRQJVseh0fQ",
                 authDomain: "chatagad-app.firebaseapp.com",
                 projectId: "chatagad-app",
-                storageBucket: "chatagad-app.firebasestorage.app",
+                storageBucket: "chatagad-app.appspot.com",
                 messagingSenderId: "946806283279",
                 appId: "1:946806283279:web:78ad7293e5a0a2017dd77a",
                 measurementId: "G-7J5TKXQB1X"
@@ -249,87 +327,131 @@
             const chatBox = document.getElementById('chat-box');
             const chatInput = document.getElementById('chat-input');
             const sendBtn = document.getElementById('send-btn');
-            const endChatBtn = document.getElementById('end-chat-btn');
-            const nextBtn = document.getElementById('next-btn');
-            const confirmationModal = document.getElementById('confirmation-modal');
-            const confirmEndBtn = document.getElementById('confirm-end-btn');
-            const cancelEndBtn = document.getElementById('cancel-end-btn');
+            const disconnectBtn = document.getElementById('disconnect-btn');
+            const newChatBtn = document.getElementById('new-chat-btn');
+            const statusText = document.getElementById('status-text');
+            const commonInterestsEl = document.getElementById('common-interests');
+            const connectionCount = document.getElementById('connection-count');
             const interestContainer = document.getElementById('interest-container');
             const interestInput = document.getElementById('interest-input');
-            const startBtn = document.querySelector('.start-btn');
+            const interestsDisplay = document.getElementById('interests-display');
+            const startBtn = document.getElementById('start-btn');
 
             // --- Utility Functions ---
             const show = (element) => element.classList.remove('hidden');
             const hide = (element) => element.classList.add('hidden');
 
             const saveInterests = (updatedInterests) => {
-                localStorage.setItem('userInterests', JSON.stringify(updatedInterests));
+                localStorage.setItem('chatInterests', JSON.stringify(updatedInterests));
                 interests = updatedInterests;
                 renderInterests();
             };
 
             const loadInterests = () => {
-                const interestsString = localStorage.getItem('userInterests');
-                interests = interestsString ? JSON.parse(interestsString) : [];
-                renderInterests();
-            };
-
-            const renderInterests = () => {
-                const existingBubbles = Array.from(interestContainer.children).filter(el => el.id !== 'interest-input');
-                existingBubbles.forEach(bubble => bubble.remove());
-                
-                interests.forEach(interest => {
-                    const bubble = document.createElement('span');
-                    bubble.classList.add('interest-bubble', 'text-sm', 'font-semibold', 'flex', 'items-center', 'gap-1');
-                    bubble.innerHTML = `
-                        <span>${interest}</span>
-                        <button class="remove-interest" data-interest="${interest}">&times;</button>
-                    `;
-                    interestContainer.insertBefore(bubble, interestInput);
-                });
-            };
-
-            const handleInterestAdd = (e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    const newInterest = interestInput.value.trim();
-                    if (newInterest && !interests.includes(newInterest)) {
-                        saveInterests([...interests, newInterest]);
-                        interestInput.value = '';
-                    }
+                const savedInterests = localStorage.getItem('chatInterests');
+                if (savedInterests) {
+                    interests = JSON.parse(savedInterests);
+                    renderInterests();
                 }
             };
             
-            const addMessage = (senderId, text) => {
-                const messageDiv = document.createElement('div');
-                messageDiv.classList.add('message');
+            const renderInterests = () => {
+                interestsDisplay.innerHTML = '';
+                interests.forEach(interest => {
+                    const bubble = document.createElement('div');
+                    bubble.classList.add('interest-bubble', 'inline-flex', 'items-center');
+                    bubble.innerHTML = `
+                        <span>${interest}</span>
+                        <button class="remove-interest ml-2 text-sm hover:text-slate-200" data-interest="${interest}">×</button>
+                    `;
+                    interestsDisplay.appendChild(bubble);
+                });
                 
-                if (senderId === 'system') {
-                    messageDiv.classList.add('text-center', 'text-gray-500', 'text-sm', 'italic', 'w-full', 'my-2');
-                    messageDiv.innerText = text;
-                } else {
-                    const isUser = senderId === userId;
-                    messageDiv.classList.add(isUser ? 'message-me' : 'message-stranger');
-                    messageDiv.innerText = text;
+                // Add event listeners to remove buttons
+                document.querySelectorAll('.remove-interest').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const interestToRemove = e.target.dataset.interest;
+                        interests = interests.filter(item => item !== interestToRemove);
+                        saveInterests();
+                        renderInterests();
+                    });
+                });
+            };
+            
+            const addMessage = (senderId, text) => {
+                // If we're still in "connecting" state, clear the loading UI
+                if (chatBox.querySelector('.flex-col.justify-center')) {
+                    chatBox.innerHTML = '';
                 }
                 
+                const messageDiv = document.createElement('div');
+                messageDiv.classList.add('message');
+                messageDiv.classList.add(senderId === userId ? 'message-me' : 'message-stranger');
+                
+                const now = new Date();
+                const timeString = now.getHours().toString().padStart(2, '0') + ':' + 
+                                  now.getMinutes().toString().padStart(2, '0');
+                
+                messageDiv.innerHTML = `
+                    <div class="message-content">${text}</div>
+                    <div class="text-xs opacity-70 mt-1 ${senderId === userId ? 'text-right' : 'text-left'}">
+                        ${timeString}
+                    </div>
+                `;
+                
                 chatBox.appendChild(messageDiv);
+                
+                // Scroll to bottom
                 chatBox.scrollTop = chatBox.scrollHeight;
             };
-
-            const renderQuickMessages = () => {
-                const quickMessagesContainer = document.getElementById('quick-messages');
-                if (!quickMessagesContainer) return;
-                quickMessagesContainer.innerHTML = '';
-                const messages = ['Hello!', 'How are you?', ...commonInterests.map(i => `What's your favorite thing about ${i}?`)];
+            
+            const showStrangerTyping = () => {
+                // Remove any existing typing indicator
+                const existingIndicator = chatBox.querySelector('.typing-indicator');
+                if (existingIndicator) existingIndicator.remove();
                 
-                messages.forEach(msgText => {
-                    const button = document.createElement('button');
-                    button.classList.add('quick-message-bubble', 'bg-gray-200', 'text-gray-800', 'text-sm', 'px-3', 'py-1', 'rounded-full', 'hover:bg-gray-300', 'transition-colors');
-                    button.innerText = msgText;
-                    button.onclick = () => { chatInput.value = msgText; };
-                    quickMessagesContainer.appendChild(button);
-                });
+                const typingIndicator = document.createElement('div');
+                typingIndicator.classList.add('message', 'message-stranger', 'typing-indicator');
+                typingIndicator.innerHTML = `
+                    <div class="flex items-center">
+                        <div class="typing-dot"></div>
+                        <div class="typing-dot"></div>
+                        <div class="typing-dot"></div>
+                    </div>
+                `;
+                chatBox.appendChild(typingIndicator);
+                chatBox.scrollTop = chatBox.scrollHeight;
+            };
+            
+            const hideStrangerTyping = () => {
+                const typingIndicator = chatBox.querySelector('.typing-indicator');
+                if (typingIndicator) typingIndicator.remove();
+            };
+            
+            const updateConnectionCount = () => {
+                const fluctuation = Math.floor(Math.random() * 20) - 10;
+                onlineUsers = Math.max(500, onlineUsers + fluctuation);
+                connectionCount.textContent = onlineUsers.toLocaleString();
+                setTimeout(updateConnectionCount, 5000);
+            };
+            
+            const updateStatus = (status) => {
+                const statusIndicator = document.querySelector('.status-indicator');
+                statusIndicator.classList.remove('status-connecting', 'status-connected');
+                
+                switch(status) {
+                    case 'connecting':
+                        statusText.textContent = 'Connecting to stranger...';
+                        statusIndicator.classList.add('status-connecting');
+                        break;
+                    case 'connected':
+                        statusText.textContent = 'Connected to stranger';
+                        statusIndicator.classList.add('status-connected');
+                        break;
+                    case 'disconnected':
+                        statusText.textContent = 'Disconnected';
+                        break;
+                }
             };
 
             // --- Firebase Initialization and Auth ---
@@ -346,19 +468,17 @@
                             userId = user.uid;
                             isAuthReady = true;
                             startBtn.disabled = false;
-                            userIdDisplay.innerText = `User ID: ${userId}`;
                             console.log("User authenticated with UID:", user.uid);
-                            checkExistingMatch();
                         } else {
                             userId = null;
                             isAuthReady = false;
                             startBtn.disabled = true;
-                            userIdDisplay.innerText = `Connecting...`;
                             console.warn("Authentication state changed: User is not authenticated.");
                         }
                     });
 
                     loadInterests();
+                    updateConnectionCount();
                 } catch (error) {
                     console.error("Firebase Initialization or Auth Error:", error);
                 }
@@ -367,26 +487,44 @@
             const startChatListener = (chatId) => {
                 console.log("Starting chat listener for chatId:", chatId);
                 if (unsubscribeFromChat) unsubscribeFromChat();
-                const chatsCollectionRef = collection(db, `artifacts/${appId}/public/data/chats`);
-                const chatDocRef = doc(chatsCollectionRef, chatId);
+                
+                const chatDocRef = doc(db, `chats/${chatId}`);
                 unsubscribeFromChat = onSnapshot(chatDocRef, (docSnap) => {
                     if (docSnap.exists()) {
                         const chatData = docSnap.data();
-                        console.log("Chat document updated:", chatData);
+                        
                         if (chatData.status === 'ended') {
                             console.log("Chat ended by other user.");
                             endChat(false);
                             return;
                         }
                         
+                        // Update messages
                         chatBox.innerHTML = '';
-                        (chatData.messages || []).forEach(msg => addMessage(msg.senderId, msg.text));
+                        (chatData.messages || []).forEach(msg => {
+                            if (msg.senderId !== 'typing') {
+                                addMessage(msg.senderId, msg.text);
+                            }
+                        });
                         
+                        // Check for typing status
+                        const lastMessage = chatData.messages?.[chatData.messages.length - 1];
+                        if (lastMessage && lastMessage.senderId === 'typing') {
+                            showStrangerTyping();
+                        } else {
+                            hideStrangerTyping();
+                        }
+                        
+                        // Update common interests
                         commonInterests = chatData.commonInterests || [];
-                        chatHeader.innerHTML = commonInterests.length > 0
-                            ? `<p>You both like: <span class="font-semibold text-gray-800">${commonInterests.join(', ')}</span></p>`
-                            : `<p>You're chatting with a random stranger.</p>`;
-                        renderQuickMessages();
+                        if (commonInterests.length > 0) {
+                            commonInterestsEl.innerHTML = `
+                                <div class="text-slate-300">You both like:</div>
+                                ${commonInterests.map(interest => 
+                                    `<span class="interest-bubble">${interest}</span>`
+                                ).join('')}
+                            `;
+                        }
                     } else {
                         console.log("Chat document does not exist. Ending chat.");
                         endChat(false);
@@ -399,18 +537,13 @@
 
             const listenForMatchStatus = () => {
                 console.log("Listening for match status for user:", userId);
-                const matchingCollectionRef = collection(db, `artifacts/${appId}/public/data/matching_queue`);
-                const userDocRef = doc(matchingCollectionRef, userId);
+                const userDocRef = doc(db, `queue/${userId}`);
                 
-                if (unsubscribeFromQueue) {
-                    unsubscribeFromQueue();
-                    unsubscribeFromQueue = null;
-                }
+                if (unsubscribeFromQueue) unsubscribeFromQueue();
                 
                 unsubscribeFromQueue = onSnapshot(userDocRef, (docSnap) => {
                     if (docSnap.exists()) {
                         const userData = docSnap.data();
-                        console.log("User queue document updated:", userData);
                         if (userData.chatId) {
                             console.log("Match found with chatId:", userData.chatId);
                             currentChatId = userData.chatId;
@@ -421,11 +554,12 @@
                             hide(homePage);
                             show(chatPage);
                             startChatListener(currentChatId);
+                            
+                            // Enable chat input
+                            chatInput.disabled = false;
                             sendBtn.disabled = false;
+                            updateStatus('connected');
                         }
-                    } else {
-                        console.log("User queue document was deleted. This means a match was made by another user's transaction.");
-                        if (unsubscribeFromQueue) unsubscribeFromQueue();
                     }
                 }, (error) => {
                     console.error("Error listening to match status:", error);
@@ -433,78 +567,44 @@
                 });
             };
 
-            const checkExistingMatch = async () => {
-                if (!isAuthReady) return;
-                const matchingCollectionRef = collection(db, `artifacts/${appId}/public/data/matching_queue`);
-                const userDocRef = doc(matchingCollectionRef, userId);
-                
-                try {
-                    const docSnap = await getDoc(userDocRef);
-                    if (docSnap.exists()) {
-                        const userData = docSnap.data();
-                        if (userData.chatId) {
-                            console.log("Found an existing match for user:", userId);
-                            currentChatId = userData.chatId;
-                            commonInterests = userData.commonInterests || [];
-                            hide(homePage);
-                            show(chatPage);
-                            startChatListener(currentChatId);
-                            sendBtn.disabled = false;
-                            return;
-                        }
-                    }
-                    // If no match is found, show the home page and clear any listeners
-                    hide(chatPage);
-                    show(homePage);
-                    if (unsubscribeFromChat) unsubscribeFromChat();
-                    if (unsubscribeFromQueue) unsubscribeFromQueue();
-                } catch (error) {
-                    console.error("Error checking for existing match:", error);
-                }
-            };
-
             const findMatchOrAddToQueue = async () => {
                 console.log("Attempting to find match or add to queue...");
-                
-                chatHeader.innerHTML = `<div class="flex items-center justify-center space-x-2">
-                                            <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-purple-900"></div>
-                                            <span>Connecting and searching...</span>
-                                        </div>`;
-                sendBtn.disabled = true;
+                updateStatus('connecting');
 
-                const matchingCollectionRef = collection(db, `artifacts/${appId}/public/data/matching_queue`);
-                const chatsCollectionRef = collection(db, `artifacts/${appId}/public/data/chats`);
+                const queueCollection = collection(db, 'queue');
+                const chatsCollection = collection(db, 'chats');
 
                 let potentialMatchRef = null;
                 let sharedInterests = [];
                 
                 try {
-                    const potentialMatchesSnapshot = await getDocs(matchingCollectionRef);
-                    const docs = potentialMatchesSnapshot.docs.filter(docSnap => docSnap.id !== userId && docSnap.data().chatId === null);
+                    const potentialMatchesSnapshot = await getDocs(queueCollection);
+                    const docs = potentialMatchesSnapshot.docs.filter(docSnap => 
+                        docSnap.id !== userId && !docSnap.data().chatId
+                    );
                     
                     let foundMatch = false;
                     for (const docSnap of docs) {
                         const matchedUserInterests = docSnap.data().interests || [];
 
-                        // Condition 1: Strict Interest-Based Match
-                        // If the current user has interests, find another user with at least one common interest
+                        // Condition 1: Interest-Based Match
                         if (interests.length > 0) {
-                            const hasCommonInterest = interests.some(interest => matchedUserInterests.includes(interest));
+                            const hasCommonInterest = interests.some(interest => 
+                                matchedUserInterests.includes(interest)
+                            );
                             if (hasCommonInterest) {
                                 potentialMatchRef = docSnap.ref;
-                                sharedInterests = interests.filter(interest => matchedUserInterests.includes(interest));
+                                sharedInterests = interests.filter(interest => 
+                                    matchedUserInterests.includes(interest)
+                                );
                                 foundMatch = true;
                                 break;
                             }
                         } else {
-                            // Condition 2: True Random Match
-                            // If the current user has no interests, find another user who also has no interests
-                            if (matchedUserInterests.length === 0) {
-                                potentialMatchRef = docSnap.ref;
-                                sharedInterests = [];
-                                foundMatch = true;
-                                break;
-                            }
+                            // Condition 2: Random Match
+                            foundMatch = true;
+                            potentialMatchRef = docSnap.ref;
+                            break;
                         }
                     }
 
@@ -512,41 +612,47 @@
                         if (foundMatch && potentialMatchRef) {
                             const potentialMatchDoc = await transaction.get(potentialMatchRef);
 
-                            if (potentialMatchDoc.exists() && potentialMatchDoc.data().chatId === null) {
-                                const newChatRef = doc(chatsCollectionRef);
+                            if (potentialMatchDoc.exists() && !potentialMatchDoc.data().chatId) {
+                                const newChatRef = doc(chatsCollection);
                                 const newChatId = newChatRef.id;
 
+                                // Create chat document
                                 transaction.set(newChatRef, {
-                                    users: [userId, potentialMatchDoc.id],
+                                    user1: userId,
+                                    user2: potentialMatchDoc.id,
                                     commonInterests: sharedInterests,
                                     createdAt: serverTimestamp(),
                                     status: 'active',
                                     messages: [{
                                         senderId: 'system',
-                                        text: "You've been connected with a stranger. Say hello!"
+                                        text: "You've been connected! Say hello."
                                     }]
                                 });
 
-                                transaction.set(doc(matchingCollectionRef, userId), { chatId: newChatId, commonInterests: sharedInterests, status: 'matched', userId: userId, interests: interests, createdAt: serverTimestamp()});
-
-                                transaction.delete(potentialMatchRef);
+                                // Update both users in queue
+                                transaction.update(potentialMatchRef, { 
+                                    chatId: newChatId,
+                                    commonInterests: sharedInterests
+                                });
+                                
+                                transaction.set(doc(queueCollection, userId), { 
+                                    chatId: newChatId,
+                                    commonInterests: sharedInterests,
+                                    interests: interests,
+                                    joinedAt: serverTimestamp()
+                                });
 
                                 currentChatId = newChatId;
-                                commonInterests = sharedInterests;
-                                console.log("Match successfully claimed in transaction with user:", potentialMatchDoc.id);
-
+                                console.log("Match successfully created with user:", potentialMatchDoc.id);
                             } else {
-                                console.warn("Race condition detected: Match was already taken. Aborting transaction.");
+                                console.warn("Match was already taken. Aborting transaction.");
                                 throw new Error("Match already claimed.");
                             }
                         } else {
-                            const userDocRef = doc(matchingCollectionRef, userId);
-                            transaction.set(userDocRef, {
-                                userId: userId,
+                            // Add user to queue
+                            transaction.set(doc(queueCollection, userId), {
                                 interests: interests,
-                                status: 'searching',
-                                chatId: null,
-                                createdAt: serverTimestamp()
+                                joinedAt: serverTimestamp()
                             });
                             console.log("No match found. Adding user to queue.");
                         }
@@ -554,6 +660,7 @@
                     
                     if (currentChatId) {
                         startChatListener(currentChatId);
+                        updateStatus('connected');
                     } else {
                         listenForMatchStatus();
                     }
@@ -569,27 +676,69 @@
                 if (!isAuthReady) return;
                 hide(homePage);
                 show(chatPage);
-                chatBox.innerHTML = '';
+                chatBox.innerHTML = `
+                    <div class="flex-1 flex flex-col items-center justify-center text-center p-4">
+                        <div class="mb-6">
+                            <div class="relative inline-block">
+                                <div class="w-16 h-16 rounded-full bg-slate-800 flex items-center justify-center mb-4 mx-auto">
+                                    <svg class="spinner w-10 h-10 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                </div>
+                            </div>
+                            <h3 class="text-xl font-bold text-white mb-2">Looking for someone you can talk to...</h3>
+                            <p class="text-slate-400">Please wait while we connect you with a stranger</p>
+                        </div>
+                        <div id="common-interests" class="mt-4 flex flex-wrap gap-2 justify-center"></div>
+                    </div>
+                `;
                 findMatchOrAddToQueue();
             };
 
             const sendMessage = async () => {
                 if (!currentChatId || !userId || !chatInput.value.trim()) return;
-                const chatsCollectionRef = collection(db, `artifacts/${appId}/public/data/chats`);
-                const chatDocRef = doc(chatsCollectionRef, currentChatId);
+                
+                const chatDocRef = doc(db, `chats/${currentChatId}`);
+                const messageText = chatInput.value.trim();
+                
                 try {
+                    // Add message
                     await updateDoc(chatDocRef, {
                         messages: arrayUnion({
                             senderId: userId,
-                            text: chatInput.value.trim(),
-                            timestamp: Date.now()
-                        }),
-                        lastMessageAt: serverTimestamp()
+                            text: messageText,
+                            timestamp: serverTimestamp()
+                        })
                     });
+                    
                     chatInput.value = '';
+                    
+                    // Clear typing status
+                    await updateDoc(chatDocRef, {
+                        messages: arrayUnion({
+                            senderId: 'typing',
+                            status: false
+                        })
+                    });
                 } catch (error) {
                     console.error("Error sending message:", error);
                 }
+            };
+            
+            const handleTyping = async () => {
+                if (!currentChatId) return;
+                
+                const chatDocRef = doc(db, `chats/${currentChatId}`);
+                
+                // Add typing indicator
+                await updateDoc(chatDocRef, {
+                    messages: arrayUnion({
+                        senderId: 'typing',
+                        status: true,
+                        timestamp: serverTimestamp()
+                    })
+                });
             };
 
             const endChat = async (isUserInitiated) => {
@@ -603,48 +752,88 @@
                 }
                 
                 if (isUserInitiated && currentChatId) {
-                    const chatsCollectionRef = collection(db, `artifacts/${appId}/public/data/chats`);
-                    const chatDocRef = doc(chatsCollectionRef, currentChatId);
+                    const chatDocRef = doc(db, `chats/${currentChatId}`);
                     try {
-                        await updateDoc(chatDocRef, { status: 'ended', endedAt: serverTimestamp() });
+                        // Mark chat as ended
+                        await updateDoc(chatDocRef, { 
+                            status: 'ended',
+                            endedAt: serverTimestamp(),
+                            messages: arrayUnion({
+                                senderId: 'system',
+                                text: "Chat ended by one of the participants"
+                            })
+                        });
+                        
+                        // Add disconnect message
+                        addMessage('system', "You disconnected");
                     } catch (error) {
-                        console.error("Error marking chat as ended:", error);
+                        console.error("Error updating chat:", error);
                     }
+                }
+                
+                // Remove user from queue
+                try {
+                    const userDocRef = doc(db, `queue/${userId}`);
+                    await deleteDoc(userDocRef);
+                } catch (error) {
+                    console.warn("Could not delete user from queue", error);
                 }
                 
                 currentChatId = null;
                 commonInterests = [];
+                
+                // Reset UI
+                chatInput.disabled = true;
+                sendBtn.disabled = true;
                 hide(chatPage);
                 show(homePage);
-                hide(confirmationModal);
-                sendBtn.disabled = false;
-                
-                const matchingCollectionRef = collection(db, `artifacts/${appId}/public/data/matching_queue`);
-                try {
-                    const userDocRef = doc(matchingCollectionRef, userId);
-                    await deleteDoc(userDocRef);
-                } catch (error) {
-                    console.warn("Could not delete user from queue. They might not have been there.", error);
-                }
+                updateStatus('disconnected');
             };
 
             // --- Event Listeners ---
-            interestContainer.addEventListener('click', (e) => {
-                if (e.target.classList.contains('remove-interest')) {
-                    const interestToRemove = e.target.dataset.interest;
-                    const updatedInterests = interests.filter(item => item !== interestToRemove);
-                    saveInterests(updatedInterests);
+            interestInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && interestInput.value.trim()) {
+                    const newInterest = interestInput.value.trim();
+                    if (!interests.includes(newInterest)) {
+                        interests.push(newInterest);
+                        saveInterests();
+                        renderInterests();
+                        interestInput.value = '';
+                    }
                 }
             });
-            interestInput.addEventListener('keydown', handleInterestAdd);
-            startBtn.addEventListener('click', startChat);
-            chatInput.addEventListener('keypress', (e) => e.key === 'Enter' && sendMessage());
-            sendBtn.addEventListener('click', sendMessage);
-            endChatBtn.addEventListener('click', () => show(confirmationModal));
-            confirmEndBtn.addEventListener('click', () => endChat(true));
-            cancelEndBtn.addEventListener('click', () => hide(confirmationModal));
-            nextBtn.addEventListener('click', () => { endChat(true); startChat(); });
             
+            startBtn.addEventListener('click', startChat);
+            
+            chatInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    sendMessage();
+                }
+            });
+            
+            chatInput.addEventListener('input', () => {
+                if (chatInput.value.trim() && !strangerIsTyping) {
+                    strangerIsTyping = true;
+                    handleTyping();
+                } else if (!chatInput.value.trim() && strangerIsTyping) {
+                    strangerIsTyping = false;
+                    handleTyping();
+                }
+            });
+            
+            sendBtn.addEventListener('click', sendMessage);
+            
+            disconnectBtn.addEventListener('click', () => {
+                addMessage('system', "You disconnected");
+                endChat(true);
+            });
+            
+            newChatBtn.addEventListener('click', () => {
+                endChat(true);
+                setTimeout(startChat, 500);
+            });
+            
+            // Initialize the app
             initializeFirebase();
         });
     </script>
