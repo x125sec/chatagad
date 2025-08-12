@@ -544,8 +544,9 @@
                     const chatDoc = await getDoc(chatDocRef);
                     if (chatDoc.exists()) {
                         const currentMessages = chatDoc.data().messages || [];
+                        // The fix: Using a client-side timestamp with Date.now()
                         await updateDoc(chatDocRef, {
-                            messages: [...currentMessages, { senderId: userId, text: chatInput.value.trim(), timestamp: serverTimestamp() }]
+                            messages: [...currentMessages, { senderId: userId, text: chatInput.value.trim(), timestamp: Date.now() }]
                         });
                         chatInput.value = '';
                     } else {
