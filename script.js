@@ -3,7 +3,7 @@
 
 // Import Firebase libraries as a module
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.10.1/firebase-app.js";
-import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.10.1/firebase-auth.js";
+import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.10.1/firebase-auth.js";
 import { getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, onSnapshot, collection, query, where, getDocs, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.10.1/firebase-firestore.js";
 
 // Global variables for Firebase services and application state
@@ -12,19 +12,14 @@ let userId = null;
 let currentChatId = null;
 let unsubscribeFromChat = null;
 let unsubscribeFromMatching = null;
+let isAuthReady = false; // New flag to track authentication status
 
 // --- YOUR FIREBASE CONFIG ---
 // This configuration is used to connect to your specific Firebase project.
-const firebaseConfig = {
-    apiKey: "AIzaSyALyckXNK7FbzpqZGP4Lr5eVRQJVseh0fQ",
-    authDomain: "chatagad-app.firebaseapp.com",
-    projectId: "chatagad-app",
-    storageBucket: "chatagad-app.firebasestorage.app",
-    messagingSenderId: "946806283279",
-    appId: "1:946806283279:web:78ad7293e5a0a2017dd77a",
-    measurementId: "G-7J5TKXQB1X"
-};
-const appId = firebaseConfig.projectId;
+// We'll use the variables provided by the environment for a seamless experience.
+const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+const appId = typeof __app_id !== 'undefined' ? __app_id : firebaseConfig.projectId;
+const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
 // DOM elements
 const homePage = document.getElementById('home-page');
@@ -43,6 +38,7 @@ const cancelEndBtn = document.getElementById('cancel-end-btn');
 const commonInterestsDisplay = document.getElementById('common-interests-display');
 const quickMessagesContainer = document.getElementById('quick-messages');
 const userIdDisplay = document.getElementById('user-id-display');
+const loadingIndicator = document.getElementById('loading-indicator');
 
 // Firestore collections
 let matchingCollectionRef;
@@ -157,33 +153,6 @@ async function handleChatEnded() {
     }
 }
 
-async function listenForChatChanges(chatId) {
-    console.log("Listening for chat changes on chat ID:", chatId);
-    const chatDocRef = doc(chatsCollectionRef, chatId);
-    unsubscribeFromChat = onSnapshot(chatDocRef, (docSnap) => {
-        if (docSnap.exists()) {
-            const chatData = docSnap.data();
-            if (chatData.status === 'ended') {
-                handleChatEnded();
-                return;
-            }
-
-            chatBox.innerHTML = '';
-            renderChatUI(chatData.commonInterests || []);
-
-            const chatMessages = chatData.messages || [];
-            chatMessages.forEach(msg => {
-                addMessage(msg.senderId, msg.text);
-            });
-        } else {
-            handleChatEnded();
-        }
-    }, (error) => {
-        console.error("Error listening to chat:", error);
-        handleChatEnded();
-    });
-}
-
 async function findMatchOrAddToQueue() {
     console.log("Searching for a match or adding to queue...");
     try {
@@ -264,12 +233,11 @@ async function findMatchOrAddToQueue() {
 
 function startChat() {
     console.log("Start Chat button clicked.");
-    // Check if the user is authenticated before proceeding
-    if (!userId) {
-        console.error("User not authenticated. Cannot start chat.");
+    if (!isAuthReady) {
+        console.error("Authentication not ready. Cannot start chat.");
         return;
     }
-    
+
     hide(homePage);
     show(chatPage);
     chatBox.innerHTML = `<div class="text-sm text-gray-500 text-center flex items-center justify-center space-x-2">
@@ -359,20 +327,29 @@ document.addEventListener('DOMContentLoaded', () => {
         chatsCollectionRef = collection(db, `artifacts/${appId}/public/data/chats`);
         console.log("Firebase services initialized.");
 
-        // Sign in the user anonymously and set up the auth state listener
-        signInAnonymously(auth).then(() => {
-            console.log("Signed in anonymously.");
-        }).catch(error => {
-            console.error("Anonymous sign-in failed:", error);
-        });
+        // Sign in the user using the provided custom token if available, otherwise sign in anonymously
+        if (initialAuthToken) {
+            signInWithCustomToken(auth, initialAuthToken).catch(error => {
+                console.error("Custom token sign-in failed:", error);
+            });
+        } else {
+            signInAnonymously(auth).catch(error => {
+                console.error("Anonymous sign-in failed:", error);
+            });
+        }
 
+        // Listen for authentication state changes
         onAuthStateChanged(auth, user => {
             if (user) {
                 userId = user.uid;
+                isAuthReady = true;
+                startBtn.disabled = false; // Enable the button after successful sign-in
                 userIdDisplay.textContent = `User ID: ${userId}`;
                 console.log("User authenticated with UID:", userId);
             } else {
                 userId = null;
+                isAuthReady = false;
+                startBtn.disabled = true; // Disable the button if not authenticated
                 userIdDisplay.textContent = `User ID: Not authenticated`;
                 console.warn("Authentication state changed: User is not authenticated.");
             }
@@ -398,7 +375,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Load saved interests and render them
     currentInterests = loadInterests();
     renderInterests();
-    
+
     // Ensure the home page is the only page visible on load
     show(homePage);
     hide(chatPage);
