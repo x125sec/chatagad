@@ -215,7 +215,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, onSnapshot, collection, query, where, getDocs, serverTimestamp, runTransaction } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, onSnapshot, collection, query, where, getDocs, serverTimestamp, runTransaction, arrayUnion } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         document.addEventListener('DOMContentLoaded', () => {
             // --- Global State Variables ---
@@ -478,7 +478,6 @@
                                 const newChatRef = doc(chatsCollectionRef);
                                 const newChatId = newChatRef.id;
 
-                                // The fix: Removed the `timestamp: serverTimestamp()` from the message object.
                                 transaction.set(newChatRef, {
                                     users: [userId, potentialMatchDoc.id],
                                     commonInterests: sharedInterests,
@@ -541,18 +540,16 @@
                 const chatsCollectionRef = collection(db, `artifacts/${appId}/public/data/chats`);
                 const chatDocRef = doc(chatsCollectionRef, currentChatId);
                 try {
-                    const chatDoc = await getDoc(chatDocRef);
-                    if (chatDoc.exists()) {
-                        const currentMessages = chatDoc.data().messages || [];
-                        // The fix: Using a client-side timestamp with Date.now()
-                        await updateDoc(chatDocRef, {
-                            messages: [...currentMessages, { senderId: userId, text: chatInput.value.trim(), timestamp: Date.now() }]
-                        });
-                        chatInput.value = '';
-                    } else {
-                        console.error("Chat document does not exist when trying to send a message.");
-                        endChat(true);
-                    }
+                    // Use arrayUnion to atomically append the new message to the array
+                    await updateDoc(chatDocRef, {
+                        messages: arrayUnion({
+                            senderId: userId,
+                            text: chatInput.value.trim(),
+                            timestamp: Date.now() // Use a client-side timestamp
+                        }),
+                        lastMessageAt: serverTimestamp() // Add a top-level timestamp for correct sorting
+                    });
+                    chatInput.value = '';
                 } catch (error) {
                     console.error("Error sending message:", error);
                 }
