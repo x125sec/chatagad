@@ -1,70 +1,136 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+/*
+ * This file contains custom CSS rules for the ChatAgad application.
+ * It is meant to be used alongside Tailwind CSS.
+ */
 
-/* General body styling and font import */
+/* The home-page and chat-page are initially hidden via JS. */
+.hidden {
+    display: none;
+}
+
+/* Base body and font styles, applied via Tailwind, but good to have a fallback. */
 body {
     font-family: 'Inter', sans-serif;
-    background-color: #f3f4f6;
+    background-color: #f7fafc; /* Tailwind's gray-50 */
 }
 
-/* The main container for the app, with fluid width and centering */
-.container {
-    max-width: 800px;
-    margin: 0 auto;
-    min-height: 100vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 1rem;
-}
-
-/* Styles for the chat message display area */
-.chat-box {
-    height: 60vh;
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
+/* Style for the main pages to center them and fill the viewport */
+.page {
+    width: 100%;
+    height: 100vh;
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
-    padding: 1rem;
-    background-color: #ffffff;
-    border-bottom: 1px solid #e5e7eb;
-    scrollbar-width: thin;
-    scrollbar-color: #d1d5db #f3f4f6;
+    align-items: center;
+    justify-content: center;
 }
 
-/* Custom scrollbar for WebKit browsers */
-.chat-box::-webkit-scrollbar {
-    width: 8px;
-}
-.chat-box::-webkit-scrollbar-track {
-    background: #f3f4f6;
-}
-.chat-box::-webkit-scrollbar-thumb {
-    background-color: #d1d5db;
-    border-radius: 4px;
+/* Specific styling for the Home Page */
+#home-page {
+    max-width: 600px;
+    background-color: white; /* Tailwind's white */
+    padding: 1.5rem; /* Tailwind's p-6 */
+    border-radius: 0.75rem; /* Tailwind's rounded-xl */
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); /* Tailwind's shadow-lg */
 }
 
-/* Individual message bubble styling */
+/* Styling for the interest input area */
+#interest-container {
+    background-color: #f7fafc; /* Tailwind's gray-100 */
+    border-radius: 0.75rem; /* Tailwind's rounded-xl */
+    padding: 1rem; /* Tailwind's p-4 */
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+/* Styling for the interest bubbles */
+.interest-bubble {
+    background-color: #e2e8f0; /* Tailwind's gray-200 */
+    color: #4a5568; /* Tailwind's gray-700 */
+    font-size: 0.875rem; /* Tailwind's text-sm */
+    padding: 0.25rem 0.75rem; /* Tailwind's py-1 px-3 */
+    border-radius: 9999px; /* Tailwind's rounded-full */
+    margin-right: 0.5rem; /* Tailwind's mr-2 */
+    margin-bottom: 0.5rem; /* Tailwind's mb-2 */
+    display: inline-flex;
+    align-items: center;
+    cursor: default;
+}
+
+.remove-interest {
+    background: none;
+    border: none;
+    color: #718096; /* Tailwind's gray-500 */
+    font-weight: bold;
+    margin-left: 0.5rem; /* Tailwind's ml-2 */
+    cursor: pointer;
+    padding: 0;
+    line-height: 1;
+}
+
+/* Styling for the chat page and its components */
+#chat-page {
+    width: 100%;
+    max-width: 700px;
+    background-color: #ffffff; /* White background for the chat page */
+    padding: 1rem; /* Tailwind's p-4 */
+    border-radius: 0.75rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+#chat-box {
+    background-color: #f7fafc; /* Tailwind's gray-50 */
+    border: 1px solid #e2e8f0; /* Tailwind's border-gray-200 */
+    border-radius: 0.5rem; /* Tailwind's rounded-lg */
+    padding: 1rem; /* Tailwind's p-4 */
+    flex-grow: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem; /* Tailwind's gap-2 */
+    height: 60vh; /* Give the chat box a fixed height to enable scrolling */
+}
+
 .message {
-    max-width: 75%;
-    padding: 0.75rem 1rem;
-    border-radius: 1.5rem;
+    max-width: 70%;
+    padding: 0.5rem 1rem;
+    border-radius: 1.5rem; /* Full rounding for chat bubbles */
     word-wrap: break-word;
 }
+
 .message-me {
-    background-color: #6366f1;
+    background-color: #6366f1; /* Tailwind's indigo-500 */
     color: white;
     align-self: flex-end;
     border-bottom-right-radius: 0.5rem;
 }
+
 .message-stranger {
-    background-color: #e5e7eb;
-    color: #1f2937;
+    background-color: #e2e8f0; /* Tailwind's gray-200 */
+    color: #2d3748; /* Tailwind's gray-800 */
     align-self: flex-start;
     border-bottom-left-radius: 0.5rem;
 }
 
-/* Modal overlay to darken the background */
+/* Styles for quick message bubbles */
+.quick-message-bubble {
+    background-color: #e2e8f0; /* Tailwind's gray-200 */
+    color: #4a5568; /* Tailwind's gray-700 */
+    padding: 0.5rem 1rem;
+    border-radius: 9999px; /* Tailwind's rounded-full */
+    font-size: 0.875rem; /* Tailwind's text-sm */
+    margin-right: 0.5rem;
+    margin-bottom: 0.5rem;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.quick-message-bubble:hover {
+    background-color: #cbd5e0; /* Tailwind's gray-300 */
+}
+
+/* Modal for confirmation */
 .modal-overlay {
     position: fixed;
     top: 0;
@@ -75,63 +141,25 @@ body {
     display: flex;
     justify-content: center;
     align-items: center;
-    z-index: 100;
+    z-index: 1000;
 }
 
-/* Styling for the interest input container and bubbles */
-#interest-container {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-    padding: 0.75rem;
-    border: 1px solid #d1d5db;
-    border-radius: 0.5rem;
-    background-color: #ffffff;
-    align-items: center;
-}
-.interest-bubble {
-    background-color: #e5e7eb;
-    color: #1f2937;
-    padding: 0.25rem 0.75rem;
-    border-radius: 9999px;
-    display: flex;
-    align-items: center;
-    gap: 0.25rem;
-}
-.remove-interest {
-    background-color: transparent;
-    border: none;
-    cursor: pointer;
-    color: #4b5563;
-    font-weight: bold;
-    font-size: 0.875rem;
-    line-height: 1;
-    padding: 0 0.25rem;
-}
-.remove-interest:hover {
-    color: #1f2937;
+.modal-content {
+    background-color: white;
+    padding: 2rem;
+    border-radius: 0.75rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
 }
 
-/* Input field inside the bubble container */
-.interest-input-field {
-    flex-grow: 1;
-    border: none;
-    outline: none;
-    padding: 0;
-    background-color: transparent;
+/* Loading spinner animation */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
-
-/* NEW: Styles for the clickable message bubbles */
-.quick-message-bubble {
-    background-color: #cbd5e1;
-    color: #1e293b;
-    padding: 0.5rem 1rem;
-    border-radius: 9999px;
-    font-size: 0.875rem;
-    cursor: pointer;
-    border: none;
-    transition: background-color 0.2s ease;
-}
-.quick-message-bubble:hover {
-    background-color: #94a3b8;
+.animate-spin {
+    animation: spin 1s linear infinite;
 }
