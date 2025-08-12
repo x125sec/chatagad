@@ -459,72 +459,77 @@
                 const matchingCollectionRef = collection(db, `artifacts/${appId}/public/data/matching_queue`);
                 const chatsCollectionRef = collection(db, `artifacts/${appId}/public/data/chats`);
 
+                // First, find a potential match outside the transaction.
+                let potentialMatchRef = null;
+                let sharedInterests = [];
+                
                 try {
-                    await runTransaction(db, async (transaction) => {
-                        let matchedUserDoc = null;
-                        let sharedInterests = [];
-
-                        // Fetch all documents in the matching queue
-                        const querySnapshot = await transaction.get(matchingCollectionRef);
-
-                        // 1. Try to find a match based on interests first
+                    const potentialMatchesSnapshot = await getDocs(matchingCollectionRef);
+                    const docs = potentialMatchesSnapshot.docs.filter(docSnap => docSnap.id !== userId && docSnap.data().chatId === null);
+                    
+                    if (docs.length > 0) {
                         if (interests.length > 0) {
-                            for (const docSnap of querySnapshot.docs) {
-                                if (docSnap.id !== userId) {
-                                    const matchedUserInterests = docSnap.data().interests || [];
-                                    const hasCommonInterest = interests.some(interest => matchedUserInterests.includes(interest));
-                                    if (hasCommonInterest) {
-                                        matchedUserDoc = docSnap;
-                                        sharedInterests = interests.filter(interest => matchedUserInterests.includes(interest));
-                                        break; // Found a match, exit loop
-                                    }
+                            // Find a match by interests first
+                            for (const docSnap of docs) {
+                                const matchedUserInterests = docSnap.data().interests || [];
+                                const hasCommonInterest = interests.some(interest => matchedUserInterests.includes(interest));
+                                if (hasCommonInterest) {
+                                    potentialMatchRef = docSnap.ref;
+                                    sharedInterests = interests.filter(interest => matchedUserInterests.includes(interest));
+                                    break;
                                 }
                             }
                         }
 
-                        // 2. If no interest-based match, find any random user
-                        if (!matchedUserDoc) {
-                            for (const docSnap of querySnapshot.docs) {
-                                if (docSnap.id !== userId && docSnap.data().chatId === null) {
-                                    matchedUserDoc = docSnap;
-                                    sharedInterests = [];
-                                    break; // Found a match, exit loop
-                                }
-                            }
+                        // If no interest match, pick the first available random person
+                        if (!potentialMatchRef) {
+                            potentialMatchRef = docs[0].ref;
+                            sharedInterests = [];
                         }
+                    }
 
-                        if (matchedUserDoc) {
-                            // Match found, create a new chat document
-                            console.log("Match found with user:", matchedUserDoc.id);
-                            const newChatRef = doc(chatsCollectionRef);
-                            const newChatId = newChatRef.id;
-                            const chatData = {
-                                users: [userId, matchedUserDoc.id],
-                                commonInterests: sharedInterests,
-                                createdAt: serverTimestamp(),
-                                status: 'active',
-                                messages: [{
-                                    senderId: 'system',
-                                    text: "You've been connected with a stranger. Say hello!",
-                                    timestamp: serverTimestamp()
-                                }]
-                            };
-                            
-                            // Create the new chat document
-                            transaction.set(newChatRef, chatData);
-                            
-                            // Update our queue document with the new chatId
-                            transaction.update(doc(matchingCollectionRef, userId), { chatId: newChatId, commonInterests: sharedInterests });
-                            
-                            // Delete the matched user's queue document
-                            transaction.delete(doc(matchingCollectionRef, matchedUserDoc.id));
-                            
-                            currentChatId = newChatId;
-                            commonInterests = sharedInterests;
-                            
+                    // Now, run the transaction to either claim the match or add to the queue.
+                    await runTransaction(db, async (transaction) => {
+                        if (potentialMatchRef) {
+                            // We have a candidate, check if they are still available
+                            const potentialMatchDoc = await transaction.get(potentialMatchRef);
+
+                            if (potentialMatchDoc.exists() && potentialMatchDoc.data().chatId === null) {
+                                // Success! Claim the match.
+                                const newChatRef = doc(chatsCollectionRef);
+                                const newChatId = newChatRef.id;
+
+                                // Create the new chat document
+                                transaction.set(newChatRef, {
+                                    users: [userId, potentialMatchDoc.id],
+                                    commonInterests: sharedInterests,
+                                    createdAt: serverTimestamp(),
+                                    status: 'active',
+                                    messages: [{
+                                        senderId: 'system',
+                                        text: "You've been connected with a stranger. Say hello!",
+                                        timestamp: serverTimestamp()
+                                    }]
+                                });
+
+                                // Update our queue document with the new chatId
+                                transaction.set(doc(matchingCollectionRef, userId), { chatId: newChatId, commonInterests: sharedInterests, status: 'matched', userId: userId, interests: interests, createdAt: serverTimestamp()});
+
+                                // Delete the matched user's queue document
+                                transaction.delete(potentialMatchRef);
+
+                                currentChatId = newChatId;
+                                commonInterests = sharedInterests;
+                                console.log("Match successfully claimed in transaction with user:", potentialMatchDoc.id);
+
+                            } else {
+                                // Race condition: The candidate was claimed by someone else. Abort and let the outer function retry.
+                                console.warn("Race condition detected: Match was already taken. Aborting transaction.");
+                                // The transaction will automatically retry if this happens, so we don't need to do anything here.
+                                throw new Error("Match already claimed.");
+                            }
                         } else {
-                            // No match found, add this user to the queue
-                            console.log("No match found. Adding user to queue.");
+                            // No potential match found, so just add this user to the queue
                             const userDocRef = doc(matchingCollectionRef, userId);
                             transaction.set(userDocRef, {
                                 userId: userId,
@@ -533,6 +538,7 @@
                                 chatId: null,
                                 createdAt: serverTimestamp()
                             });
+                            console.log("No match found. Adding user to queue.");
                         }
                     });
                     
@@ -541,10 +547,12 @@
                     } else {
                         listenForMatchStatus();
                     }
+
                 } catch (error) {
                     console.error("Transaction failed:", error);
-                    // This could be due to a concurrency conflict, so we retry after a short delay
-                    setTimeout(() => findMatchOrAddToQueue(), 1000);
+                    // If the transaction failed due to a race condition (or anything else), let's retry
+                    console.log("Retrying match search after a short delay...");
+                    setTimeout(() => findMatchOrAddToQueue(), 500);
                 }
             };
             
