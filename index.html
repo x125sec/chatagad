@@ -214,7 +214,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, onSnapshot, collection, query, where, getDocs, serverTimestamp, runTransaction } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         document.addEventListener('DOMContentLoaded', () => {
@@ -228,7 +228,7 @@
             let unsubscribeFromChat = null;
             let unsubscribeFromQueue = null;
 
-            // --- IMPORTANT: FIREBASE CONFIGURATION ---
+            // --- IMPORTANT: FIREBASE CONFIGURATION (Hardcoded for deployment) ---
             const firebaseConfig = {
                 apiKey: "AIzaSyALyckXNK7FbzpqZGP4Lr5eVRQJVseh0fQ",
                 authDomain: "chatagad-app.firebaseapp.com",
@@ -239,20 +239,7 @@
                 measurementId: "G-7J5TKXQB1X"
             };
 
-            let initialAuthToken = null;
-            let appId = 'default-app-id';
-
-            // The try-catch block for the Canvas environment is now commented out
-            // because we are using a hardcoded configuration.
-            /*
-            try {
-                firebaseConfig = JSON.parse(__firebase_config);
-                initialAuthToken = __initial_auth_token;
-                appId = __app_id;
-            } catch (e) {
-                console.warn("Using hardcoded Firebase config.");
-            }
-            */
+            const appId = 'default-app-id'; // You can't use the canvas ID, so we use a default
 
             // --- DOM Elements ---
             const homePage = document.getElementById('home-page');
@@ -355,12 +342,8 @@
                     auth = getAuth(app);
                     db = getFirestore(app);
 
-                    // Sign in the user using the provided custom token or anonymously
-                    if (initialAuthToken) {
-                        await signInWithCustomToken(auth, initialAuthToken);
-                    } else {
-                        await signInAnonymously(auth);
-                    }
+                    // Sign in the user anonymously for the public website
+                    await signInAnonymously(auth);
 
                     // Set up the authentication state change listener
                     onAuthStateChanged(auth, user => {
