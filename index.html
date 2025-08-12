@@ -229,18 +229,10 @@
             let unsubscribeFromQueue = null;
 
             // --- IMPORTANT: FIREBASE CONFIGURATION ---
-            const firebaseConfig = {
-                apiKey: "AIzaSyALyckXNK7FbzpqZGP4Lr5eVRQJVseh0fQ",
-                authDomain: "chatagad-app.firebaseapp.com",
-                projectId: "chatagad-app",
-                storageBucket: "chatagad-app.firebasestorage.app",
-                messagingSenderId: "946806283279",
-                appId: "1:946806283279:web:78ad7293e5a0a2017dd77a",
-                measurementId: "G-7J5TKXQB1X"
-            };
-
-            const initialAuthToken = null;
-            const appId = firebaseConfig.projectId;
+            // DO NOT edit the firebaseConfig object directly. The `__firebase_config` and `__app_id` are provided by the canvas.
+            const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+            const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+            const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
             // --- DOM Elements ---
             const homePage = document.getElementById('home-page');
@@ -431,7 +423,7 @@
                             if (unsubscribeFromQueue) unsubscribeFromQueue();
                             
                             // Transition to chat page and start the main chat listener
-                            hide(chatHeader);
+                            hide(homePage);
                             show(chatPage);
                             startChatListener(currentChatId);
                             sendBtn.disabled = false;
@@ -439,8 +431,7 @@
                     } else {
                         console.log("User queue document was deleted. This means a match was made by another user's transaction.");
                         if (unsubscribeFromQueue) unsubscribeFromQueue();
-                        // At this point, a chat doc should exist. We don't need to do anything here.
-                        // The user's other listener should pick up the new chat.
+                        // The other user's listener should have picked up the new chat. We don't need to do anything else.
                     }
                 }, (error) => {
                     console.error("Error listening to match status:", error);
@@ -462,24 +453,42 @@
 
                 try {
                     await runTransaction(db, async (transaction) => {
-                        const q = query(matchingCollectionRef);
-                        const querySnapshot = await transaction.get(q);
                         let matchedUserDoc = null;
                         let sharedInterests = [];
 
-                        querySnapshot.forEach(docSnap => {
-                            if (docSnap.id !== userId) {
-                                const matchedUserInterests = docSnap.data().interests || [];
-                                sharedInterests = interests.filter(interest => matchedUserInterests.includes(interest));
-                                if (sharedInterests.length > 0 || (interests.length === 0 && matchedUserInterests.length === 0)) {
-                                    if (!matchedUserDoc) {
-                                        matchedUserDoc = docSnap;
-                                    }
+                        // 1. Try to find a match based on interests first
+                        if (interests.length > 0) {
+                            const q = query(matchingCollectionRef, where('interests', 'array-contains-any', interests));
+                            const querySnapshot = await transaction.get(q);
+
+                            querySnapshot.forEach(docSnap => {
+                                if (docSnap.id !== userId) {
+                                    matchedUserDoc = docSnap;
+                                    const matchedUserInterests = docSnap.data().interests || [];
+                                    sharedInterests = interests.filter(interest => matchedUserInterests.includes(interest));
+                                    // Take the first match and break
+                                    return;
                                 }
-                            }
-                        });
+                            });
+                        }
+
+                        // 2. If no interest-based match, or if no interests, find any random user
+                        if (!matchedUserDoc) {
+                            const q = query(matchingCollectionRef, where('chatId', '==', null)); // Find users who are actively waiting
+                            const querySnapshot = await transaction.get(q);
+
+                            querySnapshot.forEach(docSnap => {
+                                if (docSnap.id !== userId) {
+                                    matchedUserDoc = docSnap;
+                                    sharedInterests = [];
+                                    // Take the first match and break
+                                    return;
+                                }
+                            });
+                        }
 
                         if (matchedUserDoc) {
+                            // Match found, create a new chat document
                             console.log("Match found with user:", matchedUserDoc.id);
                             const newChatRef = doc(chatsCollectionRef);
                             const newChatId = newChatRef.id;
@@ -498,27 +507,29 @@
                             // Create the new chat document
                             transaction.set(newChatRef, chatData);
                             
-                            // Update both user documents in the queue with the new chatId
+                            // Update our queue document with the new chatId
                             transaction.update(doc(matchingCollectionRef, userId), { chatId: newChatId, commonInterests: sharedInterests });
-                            transaction.update(doc(matchingCollectionRef, matchedUserDoc.id), { chatId: newChatId, commonInterests: sharedInterests });
+                            
+                            // Delete the matched user's queue document
+                            transaction.delete(doc(matchingCollectionRef, matchedUserDoc.id));
                             
                             currentChatId = newChatId;
                             commonInterests = sharedInterests;
                             
                         } else {
+                            // No match found, add this user to the queue
                             console.log("No match found. Adding user to queue.");
                             const userDocRef = doc(matchingCollectionRef, userId);
                             transaction.set(userDocRef, {
                                 userId: userId,
                                 interests: interests,
                                 status: 'searching',
+                                chatId: null,
                                 createdAt: serverTimestamp()
                             });
                         }
                     });
                     
-                    // After the transaction, start the listener. If a match was found, the listener will
-                    // immediately see the chatId and transition to chat. If not, it will wait.
                     if (currentChatId) {
                         startChatListener(currentChatId);
                     } else {
@@ -526,7 +537,7 @@
                     }
                 } catch (error) {
                     console.error("Transaction failed:", error);
-                    // This could be due to a concurrency conflict, so we can retry after a short delay
+                    // This could be due to a concurrency conflict, so we retry after a short delay
                     setTimeout(() => findMatchOrAddToQueue(), 1000);
                 }
             };
