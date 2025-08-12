@@ -4,84 +4,205 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ChatAgad</title>
-    <!-- Use Tailwind CSS for styling -->
+    <!-- Use Tailwind CSS for rapid styling -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Link to the external CSS file -->
-    <link rel="stylesheet" href="style.css">
-</head>
-<body class="bg-gray-100 flex items-center justify-center min-h-screen p-4">
-    <div class="container bg-white shadow-xl rounded-2xl p-6 relative">
-        <!-- User ID Display (for debugging) -->
-        <div id="user-id-display" class="hidden text-sm text-gray-500 mb-4"></div>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+
+        /* --- Custom Styles for ChatAgad --- */
+        .page {
+            width: 100%;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Home Page Styles */
+        #home-page {
+            max-width: 600px;
+        }
+
+        .interest-bubble {
+            background-color: #e2e8f0;
+            color: #4a5568;
+            font-size: 0.875rem;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            margin-right: 0.5rem;
+            margin-bottom: 0.5rem;
+            display: inline-flex;
+            align-items: center;
+            cursor: default;
+        }
+
+        .remove-interest {
+            background: none;
+            border: none;
+            color: #718096;
+            font-weight: bold;
+            margin-left: 0.5rem;
+            cursor: pointer;
+            padding: 0;
+            line-height: 1;
+        }
+
+        .interest-input-field {
+            border: 1px solid #e2e8f0;
+            border-radius: 0.5rem;
+            padding: 0.5rem;
+            flex-grow: 1;
+        }
+
+        /* Chat Page Styles */
+        #chat-page {
+            max-width: 700px;
+            height: 100vh;
+        }
         
-        <!-- Home Page -->
-        <div id="home-page" class="flex flex-col items-center">
-            <h1 class="text-3xl font-bold text-gray-800 mb-6">ChatAgad</h1>
-            <p class="text-center text-gray-600 mb-6">
-                Connect with a random stranger who shares your interests.
-            </p>
+        #chat-box {
+            background-color: #f7fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            flex-grow: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
 
-            <!-- Interests Input -->
-            <div id="interest-container" class="w-full flex flex-wrap items-center bg-white border border-gray-300 rounded-xl p-3 mb-6">
-                <input type="text" placeholder="Add an interest and press space or enter" class="interest-input-field p-2 text-gray-700 placeholder-gray-400">
-            </div>
+        .message {
+            max-width: 70%;
+            padding: 0.5rem 1rem;
+            border-radius: 1.5rem;
+            word-wrap: break-word;
+        }
 
-            <button id="start-btn" class="start-btn w-full py-3 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition-colors duration-200 shadow-md">
-                Start Chat
-            </button>
+        .message-me {
+            background-color: #6366f1;
+            color: white;
+            align-self: flex-end;
+            border-bottom-right-radius: 0;
+        }
+
+        .message-stranger {
+            background-color: #e2e8f0;
+            color: #2d3748;
+            align-self: flex-start;
+            border-bottom-left-radius: 0;
+        }
+
+        .quick-message-bubble {
+            background-color: #e2e8f0;
+            color: #4a5568;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.875rem;
+            margin-right: 0.5rem;
+            margin-bottom: 0.5rem;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .quick-message-bubble:hover {
+            background-color: #cbd5e0;
+        }
+
+        /* Confirmation Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background-color: white;
+            padding: 2rem;
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 flex items-center justify-center min-h-screen">
+
+    <!-- Home Page -->
+    <div id="home-page" class="page p-6 rounded-xl shadow-lg bg-white hidden flex-col">
+        <h1 class="text-3xl font-bold mb-4 text-gray-900">ChatAgad</h1>
+        <p class="text-gray-600 mb-6 text-center">
+            Enter your interests (e.g., "coding", "hiking") and find a stranger to chat with.
+        </p>
+
+        <div id="interest-container" class="flex flex-wrap items-center w-full max-w-md bg-gray-100 rounded-xl p-4 mb-6">
+            <!-- Interest bubbles will be inserted here -->
+            <input type="text" id="interest-input-field" class="interest-input-field bg-transparent border-none outline-none text-gray-700" placeholder="Type an interest and press Enter or Space">
         </div>
 
-        <!-- Chat Page -->
-        <div id="chat-page" class="hidden flex flex-col h-[70vh]">
-            <div id="common-interests-display" class="text-center text-gray-500 mb-4"></div>
-            
-            <!-- Chat Box -->
-            <div id="chat-box" class="flex-grow overflow-y-auto p-4 mb-4 bg-gray-50 rounded-xl flex flex-col space-y-2">
-                <!-- Messages will be added here by the script -->
-            </div>
+        <button id="start-btn" class="start-btn w-full max-w-md py-3 rounded-xl font-semibold text-white bg-indigo-500 hover:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-colors duration-200">
+            Start Chat
+        </button>
+    </div>
 
-            <!-- Quick Messages -->
-            <div id="quick-messages" class="flex flex-wrap gap-2 mb-4">
-                <!-- Quick message bubbles will be added here -->
-            </div>
-
-            <!-- Chat Input -->
-            <div class="flex">
-                <input id="chat-input" type="text" placeholder="Type a message..." class="flex-grow p-4 bg-gray-100 rounded-l-xl focus:outline-none">
-                <button id="send-btn" class="p-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-r-xl transition-colors duration-200">
-                    Send
-                </button>
-            </div>
-            
-            <!-- Control Buttons -->
-            <div class="flex justify-between mt-4">
-                <button id="end-chat-btn" class="flex-grow mr-2 py-3 px-4 bg-red-500 hover:bg-red-600 text-white font-bold rounded-xl transition-colors duration-200">
-                    End Chat
-                </button>
-                <button id="next-btn" class="flex-grow ml-2 py-3 px-4 bg-gray-400 hover:bg-gray-500 text-white font-bold rounded-xl transition-colors duration-200">
-                    Next
-                </button>
-            </div>
+    <!-- Chat Page -->
+    <div id="chat-page" class="page p-4 bg-gray-100 hidden">
+        <!-- Common Interests Display -->
+        <div id="common-interests-display" class="w-full max-w-3xl text-center text-gray-500 mb-4">
+            <!-- Common interests will be displayed here -->
         </div>
 
-        <!-- Confirmation Modal -->
-        <div id="confirmation-modal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center p-4">
-            <div class="bg-white p-8 rounded-xl shadow-lg text-center max-w-sm">
-                <h3 class="text-xl font-bold mb-4">End Chat?</h3>
-                <p class="text-gray-600 mb-6">Are you sure you want to end this chat? You can't undo this action.</p>
-                <div class="flex justify-center space-x-4">
-                    <button id="confirm-end-btn" class="py-2 px-6 bg-red-500 hover:bg-red-600 text-white font-bold rounded-xl transition-colors">
-                        Yes
-                    </button>
-                    <button id="cancel-end-btn" class="py-2 px-6 bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold rounded-xl transition-colors">
-                        Cancel
-                    </button>
-                </div>
+        <!-- Chat Box -->
+        <div id="chat-box" class="w-full max-w-3xl h-full flex flex-col mb-4">
+            <!-- Messages will be added here -->
+        </div>
+
+        <!-- Quick Messages -->
+        <div id="quick-messages" class="w-full max-w-3xl flex flex-wrap justify-center mb-4">
+            <!-- Quick messages will be dynamically inserted here -->
+        </div>
+
+        <!-- Chat Input -->
+        <div class="flex w-full max-w-3xl mb-4">
+            <input type="text" id="chat-input" class="flex-grow p-3 rounded-l-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-800" placeholder="Type a message...">
+            <button id="send-btn" class="p-3 bg-indigo-500 text-white rounded-r-xl font-semibold hover:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-colors duration-200">Send</button>
+        </div>
+
+        <!-- Chat Control Buttons -->
+        <div class="flex w-full max-w-3xl justify-between">
+            <button id="end-chat-btn" class="py-2 px-4 rounded-xl font-semibold text-red-600 bg-red-100 hover:bg-red-200 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition-colors duration-200">End Chat</button>
+            <button id="next-btn" class="py-2 px-4 rounded-xl font-semibold text-gray-600 bg-gray-100 hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-colors duration-200">Next</button>
+        </div>
+    </div>
+
+    <!-- Confirmation Modal -->
+    <div id="confirmation-modal" class="modal-overlay hidden">
+        <div class="modal-content text-center">
+            <h2 class="text-xl font-semibold mb-4">Are you sure you want to end this chat?</h2>
+            <div class="flex justify-center space-x-4">
+                <button id="confirm-end-btn" class="py-2 px-4 rounded-xl font-semibold text-white bg-red-500 hover:bg-red-600 focus:outline-none">Yes, end it</button>
+                <button id="cancel-end-btn" class="py-2 px-4 rounded-xl font-semibold text-gray-700 bg-gray-200 hover:bg-gray-300 focus:outline-none">Cancel</button>
             </div>
         </div>
     </div>
-    
-    <!-- Link to the main application script -->
+
+    <!-- User ID Display -->
+    <div id="user-id-display" class="absolute bottom-4 left-4 text-xs text-gray-400"></div>
+
+    <!-- Import the JavaScript file -->
     <script type="module" src="script.js"></script>
 </body>
 </html>
