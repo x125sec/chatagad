@@ -348,7 +348,6 @@
                             startBtn.disabled = false;
                             userIdDisplay.innerText = `User ID: ${userId}`;
                             console.log("User authenticated with UID:", user.uid);
-                            // New logic: Check for an existing match right after authentication
                             checkExistingMatch();
                         } else {
                             userId = null;
@@ -485,6 +484,7 @@
                     
                     if (docs.length > 0) {
                         if (interests.length > 0) {
+                            // Find match with a common interest
                             for (const docSnap of docs) {
                                 const matchedUserInterests = docSnap.data().interests || [];
                                 const hasCommonInterest = interests.some(interest => matchedUserInterests.includes(interest));
@@ -494,11 +494,16 @@
                                     break;
                                 }
                             }
-                        }
-
-                        if (!potentialMatchRef) {
-                            potentialMatchRef = docs[0].ref;
-                            sharedInterests = [];
+                        } else {
+                            // Find match with a user who also has no interests
+                            for (const docSnap of docs) {
+                                const matchedUserInterests = docSnap.data().interests || [];
+                                if (matchedUserInterests.length === 0) {
+                                    potentialMatchRef = docSnap.ref;
+                                    sharedInterests = [];
+                                    break;
+                                }
+                            }
                         }
                     }
 
