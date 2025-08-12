@@ -229,10 +229,19 @@
             let unsubscribeFromQueue = null;
 
             // --- IMPORTANT: FIREBASE CONFIGURATION ---
-            // DO NOT edit the firebaseConfig object directly. The `__firebase_config` and `__app_id` are provided by the canvas.
-            const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+            const userConfig = {
+                apiKey: "AIzaSyALyckXNK7FbzpqZGP4Lr5eVRQJVseh0fQ",
+                authDomain: "chatagad-app.firebaseapp.com",
+                projectId: "chatagad-app",
+                storageBucket: "chatagad-app.firebasestorage.app",
+                messagingSenderId: "946806283279",
+                appId: "1:946806283279:web:78ad7293e5a0a2017dd77a",
+                measurementId: "G-7J5TKXQB1X"
+            };
+
+            const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : userConfig;
             const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-            const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+            const appId = typeof __app_id !== 'undefined' ? __app_id : firebaseConfig.projectId;
 
             // --- DOM Elements ---
             const homePage = document.getElementById('home-page');
