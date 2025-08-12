@@ -13,7 +13,8 @@ let currentChatId = null;
 let unsubscribeFromChat = null;
 let unsubscribeFromMatching = null;
 
-// Firebase configuration. This should be the same across all files.
+// --- YOUR FIREBASE CONFIG ---
+// This configuration is used to connect to your specific Firebase project.
 const firebaseConfig = {
     apiKey: "AIzaSyALyckXNK7FbzpqZGP4Lr5eVRQJVseh0fQ",
     authDomain: "chatagad-app.firebaseapp.com",
@@ -23,7 +24,7 @@ const firebaseConfig = {
     appId: "1:946806283279:web:78ad7293e5a0a2017dd77a",
     measurementId: "G-7J5TKXQB1X"
 };
-const appId = "chatagad-app";
+const appId = firebaseConfig.projectId;
 
 // DOM elements
 const homePage = document.getElementById('home-page');
@@ -67,6 +68,7 @@ function loadInterests() {
 }
 
 function renderInterests() {
+    console.log("Rendering interests:", currentInterests);
     const existingBubbles = interestContainer.querySelectorAll('.interest-bubble');
     existingBubbles.forEach(bubble => bubble.remove());
 
@@ -132,6 +134,7 @@ function renderChatUI(interests) {
 }
 
 async function handleChatEnded() {
+    console.log("Handling chat ended...");
     if (unsubscribeFromChat) {
         unsubscribeFromChat();
         unsubscribeFromChat = null;
@@ -155,6 +158,7 @@ async function handleChatEnded() {
 }
 
 async function listenForChatChanges(chatId) {
+    console.log("Listening for chat changes on chat ID:", chatId);
     const chatDocRef = doc(chatsCollectionRef, chatId);
     unsubscribeFromChat = onSnapshot(chatDocRef, (docSnap) => {
         if (docSnap.exists()) {
@@ -181,6 +185,7 @@ async function listenForChatChanges(chatId) {
 }
 
 async function findMatchOrAddToQueue() {
+    console.log("Searching for a match or adding to queue...");
     try {
         const q = query(matchingCollectionRef);
         const querySnapshot = await getDocs(q);
@@ -200,6 +205,7 @@ async function findMatchOrAddToQueue() {
         });
 
         if (matchedUserDoc) {
+            console.log("Match found with user:", matchedUserDoc.id);
             const newChatDoc = doc(chatsCollectionRef);
             currentChatId = newChatDoc.id;
 
@@ -225,6 +231,7 @@ async function findMatchOrAddToQueue() {
             listenForChatChanges(currentChatId);
 
         } else {
+            console.log("No match found. Adding user to queue.");
             const userDocRef = doc(matchingCollectionRef, userId);
             await setDoc(userDocRef, {
                 userId: userId,
@@ -255,7 +262,8 @@ async function findMatchOrAddToQueue() {
     }
 }
 
-async function startChat() {
+function startChat() {
+    console.log("Start Chat button clicked.");
     // Check if the user is authenticated before proceeding
     if (!userId) {
         console.error("User not authenticated. Cannot start chat.");
@@ -273,6 +281,7 @@ async function startChat() {
 }
 
 async function sendMessage() {
+    console.log("Send message clicked.");
     if (!currentChatId || !userId) return;
     const message = chatInput.value.trim();
     if (message) {
@@ -295,6 +304,7 @@ async function sendMessage() {
 }
 
 async function endChat() {
+    console.log("End chat clicked.");
     if (!currentChatId) {
         handleChatEnded();
         return;
@@ -314,6 +324,7 @@ async function endChat() {
 // --- Event Handlers ---
 function handleInterestInput(e) {
     if (e.key === 'Enter' || e.key === ' ') {
+        console.log("Interest input keypress detected.");
         e.preventDefault();
         const interest = interestInputField.value.trim().toLowerCase();
         if (interest && interest.length > 0 && !currentInterests.includes(interest)) {
@@ -337,7 +348,7 @@ function handleEndChatButtonClick() {
 
 // --- Event Listeners and Initial Setup ---
 document.addEventListener('DOMContentLoaded', () => {
-    console.log("Script is loaded and DOM content is ready.");
+    console.log("Script is loaded and DOM content is ready. Initializing Firebase.");
 
     // Initialize Firebase services immediately on page load
     try {
@@ -346,6 +357,7 @@ document.addEventListener('DOMContentLoaded', () => {
         db = getFirestore(app);
         matchingCollectionRef = collection(db, `artifacts/${appId}/public/data/matching_queue`);
         chatsCollectionRef = collection(db, `artifacts/${appId}/public/data/chats`);
+        console.log("Firebase services initialized.");
 
         // Sign in the user anonymously and set up the auth state listener
         signInAnonymously(auth).then(() => {
