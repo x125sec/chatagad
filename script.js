@@ -1,9 +1,9 @@
 // This file should be named 'script.js' and placed in the same folder as your index.html file.
 
-import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-// FIX: Added 'getDocs' to the import list.
-import { getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, onSnapshot, collection, query, where, addDoc, getDocs, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+// FIX: Updated Firebase SDK version to 11.10.1 for better stability and to resolve import issues.
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.10.1/firebase-app.js";
+import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.10.1/firebase-auth.js";
+import { getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, onSnapshot, collection, query, where, addDoc, getDocs, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.10.1/firebase-firestore.js";
 
 document.addEventListener('DOMContentLoaded', async () => {
     // Confirm that the script has loaded and is running
