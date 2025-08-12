@@ -226,6 +226,7 @@
             let interests = [];
             let commonInterests = [];
             let unsubscribeFromChat = null;
+            let unsubscribeFromQueue = null;
 
             // --- IMPORTANT: FIREBASE CONFIGURATION ---
             const firebaseConfig = {
@@ -361,12 +362,14 @@
 
             // --- Real-time Chat Listener Function ---
             const startChatListener = (chatId) => {
+                console.log("Starting chat listener for chatId:", chatId);
                 if (unsubscribeFromChat) unsubscribeFromChat();
                 const chatsCollectionRef = collection(db, `artifacts/${appId}/public/data/chats`);
                 const chatDocRef = doc(chatsCollectionRef, chatId);
                 unsubscribeFromChat = onSnapshot(chatDocRef, (docSnap) => {
                     if (docSnap.exists()) {
                         const chatData = docSnap.data();
+                        console.log("Chat document updated:", chatData);
                         if (chatData.status === 'ended') {
                             console.log("Chat ended by other user.");
                             endChat(false); // Do not delete the chat if it was ended by the other user
@@ -383,10 +386,36 @@
                             : `<p>You're chatting with a random stranger.</p>`;
                         renderQuickMessages();
                     } else {
+                        console.log("Chat document does not exist. Ending chat.");
                         endChat(false); // End the chat locally if the doc is deleted by other user
                     }
                 }, (error) => {
                     console.error("Error listening to chat:", error);
+                    endChat(false);
+                });
+            };
+            
+            // Function to listen for a new chat
+            const listenForNewChat = () => {
+                console.log("Listening for a new chat to be created for this user.");
+                const chatsCollectionRef = collection(db, `artifacts/${appId}/public/data/chats`);
+                const q = query(chatsCollectionRef, where('users', 'array-contains', userId));
+                unsubscribeFromQueue = onSnapshot(q, (querySnap) => {
+                    if (querySnap.size > 0) {
+                        querySnap.forEach(docSnap => {
+                            const chatData = docSnap.data();
+                            if (chatData.users.includes(userId)) {
+                                console.log("New chat found! Chat ID:", docSnap.id);
+                                currentChatId = docSnap.id;
+                                commonInterests = chatData.commonInterests || [];
+                                if (unsubscribeFromQueue) unsubscribeFromQueue();
+                                startChatListener(docSnap.id);
+                                sendBtn.disabled = false;
+                            }
+                        });
+                    }
+                }, (error) => {
+                    console.error("Error listening for new chat:", error);
                 });
             };
 
@@ -403,18 +432,19 @@
             };
             
             const findMatchOrAddToQueue = async () => {
+                console.log("Attempting to find match or add to queue...");
                 // Show a loading state
                 chatHeader.innerHTML = `<div class="flex items-center justify-center space-x-2">
                                             <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-purple-900"></div>
                                             <span>Connecting and searching...</span>
                                         </div>`;
                 sendBtn.disabled = true;
-
+                
                 const matchingCollectionRef = collection(db, `artifacts/${appId}/public/data/matching_queue`);
                 const chatsCollectionRef = collection(db, `artifacts/${appId}/public/data/chats`);
 
                 try {
-                    const result = await runTransaction(db, async (transaction) => {
+                    await runTransaction(db, async (transaction) => {
                         const q = query(matchingCollectionRef);
                         const querySnapshot = await transaction.get(q);
                         let matchedUserDoc = null;
@@ -434,6 +464,7 @@
                         });
 
                         if (matchedUserDoc) {
+                            console.log("Match found with user:", matchedUserDoc.id);
                             // If a match is found, create the chat and remove both users from the queue
                             const newChatRef = doc(chatsCollectionRef);
                             const newChatId = newChatRef.id;
@@ -452,8 +483,12 @@
                             transaction.delete(doc(matchingCollectionRef, matchedUserDoc.id));
                             transaction.delete(doc(matchingCollectionRef, userId));
                             
-                            return { chatId: newChatId, sharedInterests: sharedInterests };
+                            // Immediately set the chat details for the current user
+                            currentChatId = newChatId;
+                            commonInterests = sharedInterests;
+                            
                         } else {
+                            console.log("No match found. Adding user to queue.");
                             // No match found, add the current user to the queue
                             const userDocRef = doc(matchingCollectionRef, userId);
                             transaction.set(userDocRef, {
@@ -462,31 +497,16 @@
                                 status: 'searching',
                                 createdAt: serverTimestamp()
                             });
-                            return { chatId: null };
+                            
+                            // Start listening for a chat to be created by another user
+                            listenForNewChat();
                         }
                     });
 
-                    if (result.chatId) {
-                        // A chat was created inside the transaction
-                        currentChatId = result.chatId;
-                        commonInterests = result.sharedInterests;
-                        startChatListener(currentChatId);
-                        sendBtn.disabled = false;
-                    } else {
-                        // The user was added to the queue, so start listening for a new chat
-                        console.log("No match found. User added to queue and is listening for a chat.");
-                        onSnapshot(query(chatsCollectionRef, where('users', 'array-contains', userId)), (querySnap) => {
-                            if (querySnap.size > 0) {
-                                querySnap.forEach(docSnap => {
-                                    const chatData = docSnap.data();
-                                    if (chatData.users.includes(userId)) {
-                                        currentChatId = docSnap.id;
-                                        startChatListener(docSnap.id);
-                                        sendBtn.disabled = false;
-                                    }
-                                });
-                            }
-                        });
+                    // If a chat was created in the transaction, start the listener now.
+                    if (currentChatId) {
+                         startChatListener(currentChatId);
+                         sendBtn.disabled = false;
                     }
                 } catch (error) {
                     console.error("Transaction failed:", error);
@@ -516,6 +536,7 @@
                         });
                         chatInput.value = '';
                     } else {
+                        console.error("Chat document does not exist when trying to send a message.");
                         endChat(true);
                     }
                 } catch (error) {
@@ -525,6 +546,7 @@
 
             const endChat = async (isUserInitiated) => {
                 if (unsubscribeFromChat) unsubscribeFromChat();
+                if (unsubscribeFromQueue) unsubscribeFromQueue();
                 
                 // If the user initiated the end, update the chat status
                 if (isUserInitiated && currentChatId) {
