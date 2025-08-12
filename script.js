@@ -254,6 +254,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         
         try {
             // Step 1: Look for a match in the queue
+            console.log("Searching for a match in the queue...");
             const q = query(matchingCollectionRef);
             const querySnapshot = await getDocs(q);
             let matchedUserDoc = null;
@@ -279,7 +280,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
 
             if (matchedUserDoc) {
-                console.log("Match found!");
+                console.log("Match found! Creating a new chat.");
                 // A match was found, create a new chat document
                 const newChatDoc = doc(chatsCollectionRef);
                 currentChatId = newChatDoc.id;
@@ -386,7 +387,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         try {
             await deleteDoc(doc(chatsCollectionRef, currentChatId));
-        } catch (error) {
+        } catch (error) => {
             console.error("Error ending chat:", error);
         }
         handleChatEnded();
@@ -414,14 +415,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // --- Event Handlers ---
     function handleInterestInput(e) {
-        // FIX: Added console log to verify event listener is firing.
+        // FIX: The spacebar trigger was unreliable. We are now only listening for the Enter key.
+        // This is a more standard way to submit an input field.
         console.log("Interest field keydown event fired.", e.key);
-        if (e.key === ' ' || e.key === 'Enter') {
+        if (e.key === 'Enter') {
             e.preventDefault();
             const interest = interestInputField.value.trim().toLowerCase();
             if (interest && !currentInterests.includes(interest)) {
                 currentInterests.push(interest);
                 saveInterests(currentInterests);
+                console.log("Interest added:", interest);
                 renderInterests();
                 interestInputField.value = '';
             }
