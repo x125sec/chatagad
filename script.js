@@ -219,9 +219,18 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (docSnap.exists()) {
                 const chatData = docSnap.data();
                 
-                // Check if the chat has been ended gracefully
+                // This is the key change: When a user ends a chat, the other user's
+                // onSnapshot listener will detect the status change. The user with
+                // the "smaller" ID is designated to perform the final deletion. This
+                // prevents a race condition where both clients try to delete the doc.
                 if (chatData.status === 'ended') {
                     console.log(`Chat document ${chatId} status is 'ended'. Ending chat gracefully.`);
+                    const chatUsers = chatData.users || [];
+                    const ownerId = chatUsers.sort()[0]; // Determine the owner
+                    if (userId === ownerId) {
+                        console.log("Current user is the chat owner. Deleting the chat document.");
+                        deleteDoc(doc(chatsCollectionRef, chatId)).catch(err => console.error("Error deleting chat doc:", err));
+                    }
                     handleChatEnded();
                     return;
                 }
@@ -234,12 +243,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                     addMessage(msg.senderId, msg.text);
                 });
             } else {
-                // If the chat document is deleted, the chat has ended
+                // If the chat document is already deleted, the chat has ended
                 console.log(`Chat document ${chatId} no longer exists. Ending chat.`);
                 handleChatEnded();
             }
         }, (error) => {
             console.error("Error listening to chat:", error);
+            // Even if there's a listener error, attempt to clean up
             handleChatEnded();
         });
     }
@@ -384,7 +394,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     /**
-     * Ends the current chat session by deleting the chat document.
+     * Ends the current chat session by updating the chat document's status.
+     * The final deletion is handled by the `onSnapshot` listener.
      */
     async function endChat() {
         if (!currentChatId) {
@@ -394,7 +405,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         try {
             const chatDocRef = doc(chatsCollectionRef, currentChatId);
-            // FIX: Instead of deleting the document, update its status to 'ended'.
+            // Update the status to 'ended'. The onSnapshot listener will handle the final deletion.
             await updateDoc(chatDocRef, {
                 status: 'ended',
                 endedAt: serverTimestamp()
@@ -403,7 +414,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         } catch (error) {
             console.error("Error ending chat:", error);
         }
-        // handleChatEnded will be called by the onSnapshot listener
     }
 
     /**
