@@ -290,6 +290,17 @@
                     interestContainer.insertBefore(bubble, interestInput);
                 });
             };
+
+            const handleInterestAdd = (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    const newInterest = interestInput.value.trim();
+                    if (newInterest && !interests.includes(newInterest)) {
+                        saveInterests([...interests, newInterest]);
+                        interestInput.value = '';
+                    }
+                }
+            };
             
             const addMessage = (senderId, text) => {
                 const messageDiv = document.createElement('div');
