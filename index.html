@@ -215,7 +215,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, onSnapshot, collection, query, where, getDocs, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, onSnapshot, collection, query, where, getDocs, serverTimestamp, runTransaction } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         document.addEventListener('DOMContentLoaded', () => {
             // --- Global State Variables ---
@@ -234,7 +234,8 @@
                 projectId: "chatagad-app",
                 storageBucket: "chatagad-app.firebasestorage.app",
                 messagingSenderId: "946806283279",
-                appId: "1:946806283279:web:78ad7293e5a0a2017dd77a"
+                appId: "1:946806283279:web:78ad7293e5a0a2017dd77a",
+                measurementId: "G-7J5TKXQB1X"
             };
 
             const initialAuthToken = null;
@@ -409,62 +410,71 @@
                                         </div>`;
                 sendBtn.disabled = true;
 
-                try {
-                    const matchingCollectionRef = collection(db, `artifacts/${appId}/public/data/matching_queue`);
-                    const chatsCollectionRef = collection(db, `artifacts/${appId}/public/data/chats`);
-                    const q = query(matchingCollectionRef);
-                    const querySnapshot = await getDocs(q);
-                    let matchedUserDoc = null;
-                    let sharedInterests = [];
+                const matchingCollectionRef = collection(db, `artifacts/${appId}/public/data/matching_queue`);
+                const chatsCollectionRef = collection(db, `artifacts/${appId}/public/data/chats`);
 
-                    querySnapshot.forEach(docSnap => {
-                        if (docSnap.id !== userId) {
-                            const matchedUserInterests = docSnap.data().interests || [];
-                            sharedInterests = interests.filter(interest => matchedUserInterests.includes(interest));
-                            if (sharedInterests.length > 0 || (interests.length === 0 && matchedUserInterests.length === 0)) {
-                                if (!matchedUserDoc) {
-                                    matchedUserDoc = docSnap;
+                try {
+                    const result = await runTransaction(db, async (transaction) => {
+                        const q = query(matchingCollectionRef);
+                        const querySnapshot = await transaction.get(q);
+                        let matchedUserDoc = null;
+                        let sharedInterests = [];
+
+                        // Find a potential match in the queue
+                        querySnapshot.forEach(docSnap => {
+                            if (docSnap.id !== userId) {
+                                const matchedUserInterests = docSnap.data().interests || [];
+                                sharedInterests = interests.filter(interest => matchedUserInterests.includes(interest));
+                                if (sharedInterests.length > 0 || (interests.length === 0 && matchedUserInterests.length === 0)) {
+                                    if (!matchedUserDoc) {
+                                        matchedUserDoc = docSnap;
+                                    }
                                 }
                             }
+                        });
+
+                        if (matchedUserDoc) {
+                            // If a match is found, create the chat and remove both users from the queue
+                            const newChatRef = doc(chatsCollectionRef);
+                            const newChatId = newChatRef.id;
+                            const chatData = {
+                                users: [userId, matchedUserDoc.id],
+                                commonInterests: sharedInterests,
+                                createdAt: serverTimestamp(),
+                                status: 'active',
+                                messages: [{
+                                    senderId: 'system',
+                                    text: "You've been connected with a stranger. Say hello!",
+                                    timestamp: serverTimestamp()
+                                }]
+                            };
+                            transaction.set(newChatRef, chatData);
+                            transaction.delete(doc(matchingCollectionRef, matchedUserDoc.id));
+                            transaction.delete(doc(matchingCollectionRef, userId));
+                            
+                            return { chatId: newChatId, sharedInterests: sharedInterests };
+                        } else {
+                            // No match found, add the current user to the queue
+                            const userDocRef = doc(matchingCollectionRef, userId);
+                            transaction.set(userDocRef, {
+                                userId: userId,
+                                interests: interests,
+                                status: 'searching',
+                                createdAt: serverTimestamp()
+                            });
+                            return { chatId: null };
                         }
                     });
 
-                    if (matchedUserDoc) {
-                        console.log("Match found with user:", matchedUserDoc.id);
-                        const newChatDocRef = doc(chatsCollectionRef);
-                        const newChatId = newChatDocRef.id;
-                        
-                        const chatData = {
-                            users: [userId, matchedUserDoc.id],
-                            commonInterests: sharedInterests,
-                            createdAt: serverTimestamp(),
-                            status: 'active',
-                            messages: [{
-                                senderId: 'system',
-                                text: "You've been connected with a stranger. Say hello!",
-                                timestamp: serverTimestamp()
-                            }]
-                        };
-
-                        await setDoc(newChatDocRef, chatData);
-                        await deleteDoc(doc(matchingCollectionRef, matchedUserDoc.id));
-                        await deleteDoc(doc(matchingCollectionRef, userId));
-
-                        currentChatId = newChatId;
-                        startChatListener(newChatId);
+                    if (result.chatId) {
+                        // A chat was created inside the transaction
+                        currentChatId = result.chatId;
+                        commonInterests = result.sharedInterests;
+                        startChatListener(currentChatId);
                         sendBtn.disabled = false;
-                        
                     } else {
-                        console.log("No match found. Adding user to queue.");
-                        const userDocRef = doc(matchingCollectionRef, userId);
-                        await setDoc(userDocRef, {
-                            userId: userId,
-                            interests: interests,
-                            status: 'searching',
-                            createdAt: serverTimestamp()
-                        });
-                        
-                        // Listen for a new chat to be created for this user
+                        // The user was added to the queue, so start listening for a new chat
+                        console.log("No match found. User added to queue and is listening for a chat.");
                         onSnapshot(query(chatsCollectionRef, where('users', 'array-contains', userId)), (querySnap) => {
                             if (querySnap.size > 0) {
                                 querySnap.forEach(docSnap => {
@@ -479,8 +489,9 @@
                         });
                     }
                 } catch (error) {
-                    console.error("Error starting chat:", error);
-                    endChat(false);
+                    console.error("Transaction failed:", error);
+                    // This could be due to a concurrency conflict, so just try again
+                    findMatchOrAddToQueue();
                 }
             };
             
