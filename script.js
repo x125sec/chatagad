@@ -1,3 +1,6 @@
+// This file should be named 'script.js' and placed in the same folder as your index.html file.
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, onSnapshot, collection, query, where, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
@@ -6,10 +9,20 @@ document.addEventListener('DOMContentLoaded', async () => {
     console.log("ChatAgad script loaded successfully.");
 
     // --- Firebase Initialization and Auth ---
-    const firebase = window.firebase;
-    const db = getFirestore(firebase.app);
-    const auth = getAuth(firebase.app);
-    const appId = firebase.appId;
+    // Your web app's Firebase configuration - Replace this with your own!
+    const firebaseConfig = {
+        apiKey: "AIzaSyALyckXNK7FbzpqZGP4Lr5eVRQJVseh0fQ",
+        authDomain: "chatagad-app.firebaseapp.com",
+        projectId: "chatagad-app",
+        storageBucket: "chatagad-app.firebasestorage.app",
+        messagingSenderId: "946806283279",
+        appId: "1:946806283279:web:78ad7293e5a0a2017dd77a"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const auth = getAuth(app);
+    const appId = "chatagad-app"; // Using the projectId as a unique identifier
 
     let userId = null;
     let unsubscribeFromChat = null;
@@ -20,8 +33,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Authenticate the user. If an auth token is provided, use it. Otherwise, sign in anonymously.
     try {
-        if (firebase.initialAuthToken) {
-            await signInWithCustomToken(auth, firebase.initialAuthToken);
+        const initialAuthToken = null; // In a real environment, this might come from a server
+        if (initialAuthToken) {
+            await signInWithCustomToken(auth, initialAuthToken);
         } else {
             await signInAnonymously(auth);
         }
