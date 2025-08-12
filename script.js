@@ -242,14 +242,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         if (!userId) {
             console.error("User not authenticated.");
-            // This case should not be reached because the button is disabled, but it's a good safety check.
             return;
         }
 
         hide(homePage);
         show(chatPage);
         
-        // Let the user know we're searching for a match
         chatBox.innerHTML = `<p class="text-sm text-gray-500 text-center">Searching for a stranger...</p>`;
         
         try {
@@ -258,24 +256,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             const q = query(matchingCollectionRef);
             const querySnapshot = await getDocs(q);
             let matchedUserDoc = null;
-            let matchedUserInterests = [];
             let commonInterests = [];
-            let userInQueue = false;
 
-            // Simple matching logic: find the first user with at least one common interest
+            // Find the first user in the queue that is not the current user
             querySnapshot.forEach(docSnap => {
-                const userData = docSnap.data();
-                if (userData.userId === userId) {
-                    userInQueue = true;
-                }
-                if (userData.userId !== userId) { // Don't match with self
-                    matchedUserInterests = userData.interests || [];
+                if (docSnap.id !== userId) {
+                    matchedUserDoc = docSnap;
+                    const matchedUserInterests = matchedUserDoc.data().interests || [];
                     commonInterests = currentInterests.filter(interest => matchedUserInterests.includes(interest));
-                    if (commonInterests.length > 0 || (currentInterests.length === 0 && matchedUserInterests.length === 0)) {
-                        if (!matchedUserDoc) { // Only grab the first match
-                            matchedUserDoc = docSnap;
-                        }
-                    }
                 }
             });
 
@@ -300,17 +288,19 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 // Delete both users from the matching queue
                 await deleteDoc(doc(matchingCollectionRef, matchedUserDoc.id));
-                // We're not in the queue, but we should make sure we don't accidentally get added if a new user searches.
-                if (userInQueue) {
-                     await deleteDoc(doc(matchingCollectionRef, userId));
+                // We are creating a new chat, so we don't need to be in the queue anymore.
+                // We'll also check if our user document exists in the queue and delete it if so.
+                const currentUserDocInQueue = await getDoc(doc(matchingCollectionRef, userId));
+                if (currentUserDocInQueue.exists()) {
+                    await deleteDoc(doc(matchingCollectionRef, userId));
                 }
 
                 listenForChatChanges(currentChatId);
                 console.log(`Chat started with ${matchedUserDoc.id}. Chat ID: ${currentChatId}`);
 
-            } else if (!userInQueue) {
+            } else {
                 console.log("No match found. Adding user to queue.");
-                // No match found, and user is not in the queue, so add them
+                // No match found, so add the current user to the queue
                 const userDocRef = doc(matchingCollectionRef, userId);
                 await setDoc(userDocRef, {
                     userId: userId,
@@ -321,6 +311,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 console.log(`User ${userId} added to matching queue.`);
 
                 // Listen for a chat to be created for this user
+                // This listener will trigger once another user creates a chat with this user
                 unsubscribeFromMatching = onSnapshot(query(chatsCollectionRef, where('users', 'array-contains', userId)), (querySnap) => {
                     querySnap.forEach(docSnap => {
                         const chatData = docSnap.data();
@@ -339,8 +330,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }, (error) => {
                     console.error("Error listening for match:", error);
                 });
-            } else {
-                 console.log("No match found, and user is already in the queue. Waiting...");
             }
 
         } catch (error) {
@@ -387,7 +376,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         try {
             await deleteDoc(doc(chatsCollectionRef, currentChatId));
-        } catch (error) => {
+        } catch (error) {
             console.error("Error ending chat:", error);
         }
         handleChatEnded();
@@ -415,10 +404,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // --- Event Handlers ---
     function handleInterestInput(e) {
-        // FIX: The spacebar trigger was unreliable. We are now only listening for the Enter key.
-        // This is a more standard way to submit an input field.
         console.log("Interest field keydown event fired.", e.key);
-        if (e.key === 'Enter') {
+        // We listen for both 'Enter' and 'Space' to make the input more flexible.
+        if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault();
             const interest = interestInputField.value.trim().toLowerCase();
             if (interest && !currentInterests.includes(interest)) {
