@@ -256,6 +256,12 @@ async function findMatchOrAddToQueue() {
 }
 
 async function startChat() {
+    // Check if the user is authenticated before proceeding
+    if (!userId) {
+        console.error("User not authenticated. Cannot start chat.");
+        return;
+    }
+    
     hide(homePage);
     show(chatPage);
     chatBox.innerHTML = `<div class="text-sm text-gray-500 text-center flex items-center justify-center space-x-2">
@@ -263,33 +269,7 @@ async function startChat() {
         <span>Connecting and searching...</span>
     </div>`;
 
-    try {
-        if (!app) {
-            app = initializeApp(firebaseConfig);
-            auth = getAuth(app);
-            db = getFirestore(app);
-            matchingCollectionRef = collection(db, `artifacts/${appId}/public/data/matching_queue`);
-            chatsCollectionRef = collection(db, `artifacts/${appId}/public/data/chats`);
-
-            await signInAnonymously(auth);
-            onAuthStateChanged(auth, user => {
-                if (user) {
-                    userId = user.uid;
-                    userIdDisplay.textContent = `User ID: ${userId}`;
-                    findMatchOrAddToQueue();
-                } else {
-                    userId = null;
-                    userIdDisplay.textContent = `User ID: Not authenticated`;
-                    chatBox.innerHTML = `<p class="text-sm text-red-500 text-center">Authentication failed. Please try again.</p>`;
-                }
-            });
-        } else {
-            findMatchOrAddToQueue();
-        }
-    } catch (error) {
-        console.error("Firebase Initialization or Auth Error:", error);
-        chatBox.innerHTML = `<p class="text-sm text-red-500 text-center">Connection failed. Please check your internet connection.</p>`;
-    }
+    findMatchOrAddToQueue();
 }
 
 async function sendMessage() {
@@ -355,11 +335,42 @@ function handleEndChatButtonClick() {
     show(confirmationModal);
 }
 
-// --- Event Listeners ---
+// --- Event Listeners and Initial Setup ---
 document.addEventListener('DOMContentLoaded', () => {
-    // This console log will help us confirm if the script is running.
     console.log("Script is loaded and DOM content is ready.");
 
+    // Initialize Firebase services immediately on page load
+    try {
+        app = initializeApp(firebaseConfig);
+        auth = getAuth(app);
+        db = getFirestore(app);
+        matchingCollectionRef = collection(db, `artifacts/${appId}/public/data/matching_queue`);
+        chatsCollectionRef = collection(db, `artifacts/${appId}/public/data/chats`);
+
+        // Sign in the user anonymously and set up the auth state listener
+        signInAnonymously(auth).then(() => {
+            console.log("Signed in anonymously.");
+        }).catch(error => {
+            console.error("Anonymous sign-in failed:", error);
+        });
+
+        onAuthStateChanged(auth, user => {
+            if (user) {
+                userId = user.uid;
+                userIdDisplay.textContent = `User ID: ${userId}`;
+                console.log("User authenticated with UID:", userId);
+            } else {
+                userId = null;
+                userIdDisplay.textContent = `User ID: Not authenticated`;
+                console.warn("Authentication state changed: User is not authenticated.");
+            }
+        });
+
+    } catch (error) {
+        console.error("Firebase Initialization or Auth Error:", error);
+    }
+
+    // Attach all event listeners
     interestInputField.addEventListener('keyup', handleInterestInput);
     startBtn.addEventListener('click', startChat);
     chatInput.addEventListener('keypress', handleChatInputKeyPress);
@@ -372,7 +383,12 @@ document.addEventListener('DOMContentLoaded', () => {
         startChat();
     });
 
+    // Load saved interests and render them
     currentInterests = loadInterests();
     renderInterests();
+    
+    // Ensure the home page is the only page visible on load
     show(homePage);
+    hide(chatPage);
+    hide(confirmationModal);
 });
