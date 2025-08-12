@@ -359,8 +359,7 @@
                     console.error("Firebase Initialization or Auth Error:", error);
                 }
             };
-
-            // --- Real-time Chat Listener Function ---
+            
             const startChatListener = (chatId) => {
                 console.log("Starting chat listener for chatId:", chatId);
                 if (unsubscribeFromChat) unsubscribeFromChat();
@@ -376,7 +375,6 @@
                             return;
                         }
                         
-                        // Clear existing messages and render new ones
                         chatBox.innerHTML = '';
                         (chatData.messages || []).forEach(msg => addMessage(msg.senderId, msg.text));
                         
@@ -395,51 +393,57 @@
                 });
             };
             
-            // Function to listen for a new chat
-            const listenForNewChat = () => {
-                console.log("Listening for a new chat to be created for this user.");
-                const chatsCollectionRef = collection(db, `artifacts/${appId}/public/data/chats`);
-                const q = query(chatsCollectionRef, where('users', 'array-contains', userId));
-                unsubscribeFromQueue = onSnapshot(q, (querySnap) => {
-                    if (querySnap.size > 0) {
-                        querySnap.forEach(docSnap => {
-                            const chatData = docSnap.data();
-                            if (chatData.users.includes(userId)) {
-                                console.log("New chat found! Chat ID:", docSnap.id);
-                                currentChatId = docSnap.id;
-                                commonInterests = chatData.commonInterests || [];
-                                if (unsubscribeFromQueue) unsubscribeFromQueue();
-                                startChatListener(docSnap.id);
-                                sendBtn.disabled = false;
-                            }
-                        });
+            const listenForMatchStatus = () => {
+                console.log("Listening for match status for user:", userId);
+                const matchingCollectionRef = collection(db, `artifacts/${appId}/public/data/matching_queue`);
+                const userDocRef = doc(matchingCollectionRef, userId);
+                
+                // Detach any existing listener before attaching a new one
+                if (unsubscribeFromQueue) {
+                    unsubscribeFromQueue();
+                    unsubscribeFromQueue = null;
+                }
+                
+                unsubscribeFromQueue = onSnapshot(userDocRef, (docSnap) => {
+                    if (docSnap.exists()) {
+                        const userData = docSnap.data();
+                        console.log("User queue document updated:", userData);
+                        if (userData.chatId) {
+                            console.log("Match found with chatId:", userData.chatId);
+                            currentChatId = userData.chatId;
+                            commonInterests = userData.commonInterests || [];
+                            
+                            // Detach the queue listener as we are now in a chat
+                            if (unsubscribeFromQueue) unsubscribeFromQueue();
+                            
+                            // Transition to chat page and start the main chat listener
+                            startChatListener(currentChatId);
+                            sendBtn.disabled = false;
+                        }
+                    } else {
+                        // This means the user's queue document was deleted (by a matching user)
+                        // This listener will only be active if the user is in the queue, so it means a match was made
+                        // However, the other user's transaction may have created the chat and deleted this doc
+                        // before the other doc was updated. So we must now check for the new chat
+                        console.log("User queue document was deleted, likely by a matching user.");
+                        if (unsubscribeFromQueue) unsubscribeFromQueue();
+                        // Let's rely on the chat listener in the `findMatchOrAddToQueue` logic now.
                     }
                 }, (error) => {
-                    console.error("Error listening for new chat:", error);
+                    console.error("Error listening to match status:", error);
+                    endChat(false);
                 });
             };
 
-            // --- Handlers ---
-            const handleInterestAdd = (e) => {
-                if (e.key === ' ' || e.key === 'Enter') {
-                    e.preventDefault();
-                    const newInterest = interestInput.value.trim().toLowerCase();
-                    if (newInterest && !interests.includes(newInterest)) {
-                        saveInterests([...interests, newInterest]);
-                        interestInput.value = '';
-                    }
-                }
-            };
-            
             const findMatchOrAddToQueue = async () => {
                 console.log("Attempting to find match or add to queue...");
-                // Show a loading state
+                
                 chatHeader.innerHTML = `<div class="flex items-center justify-center space-x-2">
                                             <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-purple-900"></div>
                                             <span>Connecting and searching...</span>
                                         </div>`;
                 sendBtn.disabled = true;
-                
+
                 const matchingCollectionRef = collection(db, `artifacts/${appId}/public/data/matching_queue`);
                 const chatsCollectionRef = collection(db, `artifacts/${appId}/public/data/chats`);
 
@@ -450,7 +454,6 @@
                         let matchedUserDoc = null;
                         let sharedInterests = [];
 
-                        // Find a potential match in the queue
                         querySnapshot.forEach(docSnap => {
                             if (docSnap.id !== userId) {
                                 const matchedUserInterests = docSnap.data().interests || [];
@@ -465,7 +468,6 @@
 
                         if (matchedUserDoc) {
                             console.log("Match found with user:", matchedUserDoc.id);
-                            // If a match is found, create the chat and remove both users from the queue
                             const newChatRef = doc(chatsCollectionRef);
                             const newChatId = newChatRef.id;
                             const chatData = {
@@ -479,17 +481,19 @@
                                     timestamp: serverTimestamp()
                                 }]
                             };
-                            transaction.set(newChatRef, chatData);
-                            transaction.delete(doc(matchingCollectionRef, matchedUserDoc.id));
-                            transaction.delete(doc(matchingCollectionRef, userId));
                             
-                            // Immediately set the chat details for the current user
+                            // Create the new chat document
+                            transaction.set(newChatRef, chatData);
+                            
+                            // Update both user documents in the queue with the new chatId
+                            transaction.update(doc(matchingCollectionRef, userId), { chatId: newChatId, commonInterests: sharedInterests });
+                            transaction.update(doc(matchingCollectionRef, matchedUserDoc.id), { chatId: newChatId, commonInterests: sharedInterests });
+                            
                             currentChatId = newChatId;
                             commonInterests = sharedInterests;
                             
                         } else {
                             console.log("No match found. Adding user to queue.");
-                            // No match found, add the current user to the queue
                             const userDocRef = doc(matchingCollectionRef, userId);
                             transaction.set(userDocRef, {
                                 userId: userId,
@@ -497,17 +501,8 @@
                                 status: 'searching',
                                 createdAt: serverTimestamp()
                             });
-                            
-                            // Start listening for a chat to be created by another user
-                            listenForNewChat();
                         }
                     });
-
-                    // If a chat was created in the transaction, start the listener now.
-                    if (currentChatId) {
-                         startChatListener(currentChatId);
-                         sendBtn.disabled = false;
-                    }
                 } catch (error) {
                     console.error("Transaction failed:", error);
                     // This could be due to a concurrency conflict, so just try again
@@ -520,6 +515,9 @@
                 hide(homePage);
                 show(chatPage);
                 chatBox.innerHTML = '';
+                
+                // Start listening for a match *before* attempting to find one
+                listenForMatchStatus();
                 findMatchOrAddToQueue();
             };
 
@@ -545,10 +543,15 @@
             };
 
             const endChat = async (isUserInitiated) => {
-                if (unsubscribeFromChat) unsubscribeFromChat();
-                if (unsubscribeFromQueue) unsubscribeFromQueue();
+                if (unsubscribeFromChat) {
+                    unsubscribeFromChat();
+                    unsubscribeFromChat = null;
+                }
+                if (unsubscribeFromQueue) {
+                    unsubscribeFromQueue();
+                    unsubscribeFromQueue = null;
+                }
                 
-                // If the user initiated the end, update the chat status
                 if (isUserInitiated && currentChatId) {
                     const chatsCollectionRef = collection(db, `artifacts/${appId}/public/data/chats`);
                     const chatDocRef = doc(chatsCollectionRef, currentChatId);
