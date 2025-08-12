@@ -13,8 +13,7 @@ let currentChatId = null;
 let unsubscribeFromChat = null;
 let unsubscribeFromMatching = null;
 
-// Firebase configuration (hardcoded from your original code)
-// NOTE: This configuration is for a specific Firebase project.
+// Firebase configuration. This should be the same across all files.
 const firebaseConfig = {
     apiKey: "AIzaSyALyckXNK7FbzpqZGP4Lr5eVRQJVseh0fQ",
     authDomain: "chatagad-app.firebaseapp.com",
@@ -75,7 +74,7 @@ function renderInterests() {
         const bubble = document.createElement('span');
         bubble.classList.add('interest-bubble');
         bubble.textContent = interest;
-        
+
         const removeBtn = document.createElement('button');
         removeBtn.classList.add('remove-interest');
         removeBtn.textContent = 'x';
@@ -84,7 +83,7 @@ function renderInterests() {
             saveInterests(currentInterests);
             renderInterests();
         });
-        
+
         bubble.appendChild(removeBtn);
         interestContainer.insertBefore(bubble, interestInputField);
     });
@@ -97,6 +96,8 @@ function addMessage(senderId, text) {
 
     if (senderId === userId) {
         messageDiv.classList.add('message-me');
+    } else if (senderId === 'system') {
+        messageDiv.classList.add('text-center', 'text-gray-500', 'text-sm', 'my-2');
     } else {
         messageDiv.classList.add('message-stranger');
     }
@@ -130,7 +131,7 @@ function renderChatUI(interests) {
     });
 }
 
-function handleChatEnded() {
+async function handleChatEnded() {
     if (unsubscribeFromChat) {
         unsubscribeFromChat();
         unsubscribeFromChat = null;
@@ -145,6 +146,12 @@ function handleChatEnded() {
     show(homePage);
     chatBox.innerHTML = '';
     renderInterests();
+    try {
+        // Clean up user from the matching queue if they are still there
+        await deleteDoc(doc(matchingCollectionRef, userId));
+    } catch (error) {
+        console.warn("Could not delete user from queue. They might not have been there.", error);
+    }
 }
 
 async function listenForChatChanges(chatId) {
@@ -210,7 +217,7 @@ async function findMatchOrAddToQueue() {
 
             await setDoc(newChatDoc, chatData);
             await deleteDoc(doc(matchingCollectionRef, matchedUserDoc.id));
-            
+
             const currentUserDocInQueue = await getDoc(doc(matchingCollectionRef, userId));
             if (currentUserDocInQueue.exists()) {
                 await deleteDoc(doc(matchingCollectionRef, userId));
@@ -251,10 +258,10 @@ async function findMatchOrAddToQueue() {
 async function startChat() {
     hide(homePage);
     show(chatPage);
-    chatBox.innerHTML = `<p class="text-sm text-gray-500 text-center">
-        <span class="inline-block animate-spin rounded-full h-4 w-4 border-b-2 border-gray-900 mr-2"></span>
-        Connecting and searching...
-    </p>`;
+    chatBox.innerHTML = `<div class="text-sm text-gray-500 text-center flex items-center justify-center space-x-2">
+        <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-900"></div>
+        <span>Connecting and searching...</span>
+    </div>`;
 
     try {
         if (!app) {
@@ -263,7 +270,7 @@ async function startChat() {
             db = getFirestore(app);
             matchingCollectionRef = collection(db, `artifacts/${appId}/public/data/matching_queue`);
             chatsCollectionRef = collection(db, `artifacts/${appId}/public/data/chats`);
-            
+
             await signInAnonymously(auth);
             onAuthStateChanged(auth, user => {
                 if (user) {
@@ -352,7 +359,7 @@ function handleEndChatButtonClick() {
 document.addEventListener('DOMContentLoaded', () => {
     // This console log will help us confirm if the script is running.
     console.log("Script is loaded and DOM content is ready.");
-    
+
     interestInputField.addEventListener('keyup', handleInterestInput);
     startBtn.addEventListener('click', startChat);
     chatInput.addEventListener('keypress', handleChatInputKeyPress);
