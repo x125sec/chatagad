@@ -482,33 +482,28 @@
                     const potentialMatchesSnapshot = await getDocs(matchingCollectionRef);
                     const docs = potentialMatchesSnapshot.docs.filter(docSnap => docSnap.id !== userId && docSnap.data().chatId === null);
                     
-                    if (docs.length > 0) {
-                        if (interests.length > 0) {
-                            // Find match with a common interest
-                            for (const docSnap of docs) {
-                                const matchedUserInterests = docSnap.data().interests || [];
-                                const hasCommonInterest = interests.some(interest => matchedUserInterests.includes(interest));
-                                if (hasCommonInterest) {
-                                    potentialMatchRef = docSnap.ref;
-                                    sharedInterests = interests.filter(interest => matchedUserInterests.includes(interest));
-                                    break;
-                                }
+                    let foundMatch = false;
+                    for (const docSnap of docs) {
+                        const matchedUserInterests = docSnap.data().interests || [];
+
+                        // Condition 1: Both users have no interests
+                        const isRandomMatch = interests.length === 0 && matchedUserInterests.length === 0;
+
+                        // Condition 2: Both users have interests and share at least one
+                        const hasCommonInterest = interests.length > 0 && matchedUserInterests.length > 0 && interests.some(interest => matchedUserInterests.includes(interest));
+
+                        if (isRandomMatch || hasCommonInterest) {
+                            potentialMatchRef = docSnap.ref;
+                            if (hasCommonInterest) {
+                                sharedInterests = interests.filter(interest => matchedUserInterests.includes(interest));
                             }
-                        } else {
-                            // Find match with a user who also has no interests
-                            for (const docSnap of docs) {
-                                const matchedUserInterests = docSnap.data().interests || [];
-                                if (matchedUserInterests.length === 0) {
-                                    potentialMatchRef = docSnap.ref;
-                                    sharedInterests = [];
-                                    break;
-                                }
-                            }
+                            foundMatch = true;
+                            break;
                         }
                     }
 
                     await runTransaction(db, async (transaction) => {
-                        if (potentialMatchRef) {
+                        if (foundMatch && potentialMatchRef) {
                             const potentialMatchDoc = await transaction.get(potentialMatchRef);
 
                             if (potentialMatchDoc.exists() && potentialMatchDoc.data().chatId === null) {
