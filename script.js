@@ -132,6 +132,7 @@ document.addEventListener('DOMContentLoaded', async () => {
      * Renders the user's interests as clickable bubbles on the home page.
      */
     function renderInterests() {
+        console.log('Rendering interests:', currentInterests);
         const existingBubbles = interestContainer.querySelectorAll('.interest-bubble');
         existingBubbles.forEach(bubble => bubble.remove());
 
@@ -258,21 +259,27 @@ document.addEventListener('DOMContentLoaded', async () => {
             let matchedUserDoc = null;
             let matchedUserInterests = [];
             let commonInterests = [];
+            let userInQueue = false;
 
             // Simple matching logic: find the first user with at least one common interest
             querySnapshot.forEach(docSnap => {
                 const userData = docSnap.data();
+                if (userData.userId === userId) {
+                    userInQueue = true;
+                }
                 if (userData.userId !== userId) { // Don't match with self
                     matchedUserInterests = userData.interests || [];
                     commonInterests = currentInterests.filter(interest => matchedUserInterests.includes(interest));
                     if (commonInterests.length > 0 || (currentInterests.length === 0 && matchedUserInterests.length === 0)) {
-                        matchedUserDoc = docSnap;
-                        return; // Found a match, exit loop
+                        if (!matchedUserDoc) { // Only grab the first match
+                            matchedUserDoc = docSnap;
+                        }
                     }
                 }
             });
 
             if (matchedUserDoc) {
+                console.log("Match found!");
                 // A match was found, create a new chat document
                 const newChatDoc = doc(chatsCollectionRef);
                 currentChatId = newChatDoc.id;
@@ -293,12 +300,16 @@ document.addEventListener('DOMContentLoaded', async () => {
                 // Delete both users from the matching queue
                 await deleteDoc(doc(matchingCollectionRef, matchedUserDoc.id));
                 // We're not in the queue, but we should make sure we don't accidentally get added if a new user searches.
+                if (userInQueue) {
+                     await deleteDoc(doc(matchingCollectionRef, userId));
+                }
 
                 listenForChatChanges(currentChatId);
                 console.log(`Chat started with ${matchedUserDoc.id}. Chat ID: ${currentChatId}`);
 
-            } else {
-                // No match found, add the current user to the matching queue
+            } else if (!userInQueue) {
+                console.log("No match found. Adding user to queue.");
+                // No match found, and user is not in the queue, so add them
                 const userDocRef = doc(matchingCollectionRef, userId);
                 await setDoc(userDocRef, {
                     userId: userId,
@@ -306,7 +317,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     status: 'searching',
                     createdAt: serverTimestamp()
                 });
-                console.log(`No match found. User ${userId} added to matching queue.`);
+                console.log(`User ${userId} added to matching queue.`);
 
                 // Listen for a chat to be created for this user
                 unsubscribeFromMatching = onSnapshot(query(chatsCollectionRef, where('users', 'array-contains', userId)), (querySnap) => {
@@ -327,6 +338,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }, (error) => {
                     console.error("Error listening for match:", error);
                 });
+            } else {
+                 console.log("No match found, and user is already in the queue. Waiting...");
             }
 
         } catch (error) {
@@ -401,6 +414,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // --- Event Handlers ---
     function handleInterestInput(e) {
+        // FIX: Added console log to verify event listener is firing.
         console.log("Interest field keydown event fired.", e.key);
         if (e.key === ' ' || e.key === 'Enter') {
             e.preventDefault();
