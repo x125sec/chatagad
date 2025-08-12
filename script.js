@@ -2,6 +2,9 @@ import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.g
 import { getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, onSnapshot, collection, query, where, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 document.addEventListener('DOMContentLoaded', async () => {
+    // Confirm that the script has loaded and is running
+    console.log("ChatAgad script loaded successfully.");
+
     // --- Firebase Initialization and Auth ---
     const firebase = window.firebase;
     const db = getFirestore(firebase.app);
@@ -32,9 +35,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             userId = user.uid;
             userIdDisplay.textContent = `Your User ID: ${userId}`;
             userIdDisplay.classList.remove('hidden');
+            console.log(`User authenticated with ID: ${userId}`);
         } else {
             userId = null;
             userIdDisplay.classList.add('hidden');
+            console.log("User not authenticated.");
         }
     });
 
@@ -135,6 +140,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         const messageDiv = document.createElement('div');
         messageDiv.classList.add('message');
         
+        // Add a data attribute to store the sender ID, which is a key fix
+        messageDiv.setAttribute('data-sender-id', senderId);
+
         if (senderId === userId) {
             messageDiv.classList.add('message-me');
         } else {
@@ -206,6 +214,8 @@ document.addEventListener('DOMContentLoaded', async () => {
      * Handles the logic for starting a new chat session.
      */
     async function startChat() {
+        console.log("Start Chat button clicked.");
+
         if (!userId) {
             console.error("User not authenticated.");
             return;
@@ -313,7 +323,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             try {
                 await updateDoc(chatDocRef, {
                     messages: [
-                        ...chatBox.children.length > 1 ? chatBox.children.slice(1).map(c => ({ senderId: c.getAttribute('data-sender-id'), text: c.textContent })) : [],
+                        ...chatBox.children.length > 1 ? Array.from(chatBox.children).slice(1).map(c => ({ senderId: c.getAttribute('data-sender-id'), text: c.textContent })) : [],
                         {
                             senderId: userId,
                             text: message,
@@ -367,6 +377,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // --- Event Handlers ---
     function handleInterestInput(e) {
+        console.log("Interest field keydown event fired.", e.key);
         if (e.key === ' ' || e.key === 'Enter') {
             e.preventDefault();
             const interest = interestInputField.value.trim().toLowerCase();
