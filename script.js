@@ -218,6 +218,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         unsubscribeFromChat = onSnapshot(chatDocRef, (docSnap) => {
             if (docSnap.exists()) {
                 const chatData = docSnap.data();
+                
+                // Check if the chat has been ended gracefully
+                if (chatData.status === 'ended') {
+                    console.log(`Chat document ${chatId} status is 'ended'. Ending chat gracefully.`);
+                    handleChatEnded();
+                    return;
+                }
+
                 chatBox.innerHTML = ''; // Clear existing messages
                 renderChatUI(chatData.commonInterests || []);
 
@@ -288,6 +296,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     users: [userId, matchedUserDoc.id],
                     commonInterests: commonInterests,
                     createdAt: serverTimestamp(),
+                    status: 'active', // FIX: Add a status field to the chat document.
                     messages: [{
                         senderId: 'system',
                         text: "You're now connected with a stranger. Say hello!",
@@ -383,19 +392,18 @@ document.addEventListener('DOMContentLoaded', async () => {
             return;
         }
 
-        // Unsubscribe from the chat listener before deleting to avoid race conditions.
-        if (unsubscribeFromChat) {
-            unsubscribeFromChat();
-            unsubscribeFromChat = null;
-        }
-
         try {
-            await deleteDoc(doc(chatsCollectionRef, currentChatId));
-            console.log(`Chat ${currentChatId} ended by user.`);
+            const chatDocRef = doc(chatsCollectionRef, currentChatId);
+            // FIX: Instead of deleting the document, update its status to 'ended'.
+            await updateDoc(chatDocRef, {
+                status: 'ended',
+                endedAt: serverTimestamp()
+            });
+            console.log(`Chat ${currentChatId} status updated to 'ended'.`);
         } catch (error) {
             console.error("Error ending chat:", error);
         }
-        handleChatEnded();
+        // handleChatEnded will be called by the onSnapshot listener
     }
 
     /**
@@ -455,7 +463,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     endChatBtn.addEventListener('click', handleEndChatButtonClick);
     confirmEndBtn.addEventListener('click', endChat);
     cancelEndBtn.addEventListener('click', () => hide(confirmationModal));
-    nextBtn.addEventListener('click', handleChatEnded);
+    nextBtn.addEventListener('click', () => {
+        handleChatEnded();
+        startChat();
+    });
 
     // Initial setup on page load
     currentInterests = loadInterests();
