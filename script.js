@@ -299,6 +299,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 // Delete both users from the matching queue
                 await deleteDoc(doc(matchingCollectionRef, matchedUserDoc.id));
+                // We'll also check if our user document exists in the queue and delete it if so.
+                const currentUserDocInQueue = await getDoc(doc(matchingCollectionRef, userId));
+                if (currentUserDocInQueue.exists()) {
+                    await deleteDoc(doc(matchingCollectionRef, userId));
+                }
                 listenForChatChanges(currentChatId);
                 console.log(`Chat started with ${matchedUserDoc.id}. Chat ID: ${currentChatId}`);
 
@@ -359,6 +364,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                         messages: [...currentMessages, { senderId: userId, text: message, timestamp: serverTimestamp() }]
                     });
                     chatInput.value = '';
+                } else {
+                    console.error("Error sending message: Chat document does not exist.");
+                    handleChatEnded();
                 }
             } catch (error) {
                 console.error("Error sending message:", error);
@@ -375,6 +383,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             return;
         }
 
+        // Unsubscribe from the chat listener before deleting to avoid race conditions.
+        if (unsubscribeFromChat) {
+            unsubscribeFromChat();
+            unsubscribeFromChat = null;
+        }
+
         try {
             await deleteDoc(doc(chatsCollectionRef, currentChatId));
             console.log(`Chat ${currentChatId} ended by user.`);
@@ -389,10 +403,12 @@ document.addEventListener('DOMContentLoaded', async () => {
      */
     function handleChatEnded() {
         if (unsubscribeFromChat) {
+            console.log("Unsubscribing from chat listener.");
             unsubscribeFromChat();
             unsubscribeFromChat = null;
         }
         if (unsubscribeFromMatching) {
+            console.log("Unsubscribing from matching listener.");
             unsubscribeFromMatching();
             unsubscribeFromMatching = null;
         }
@@ -411,7 +427,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault();
             const interest = interestInputField.value.trim().toLowerCase();
-            if (interest && interest !== '' && !currentInterests.includes(interest)) {
+            if (interest && interest.length > 0 && !currentInterests.includes(interest)) {
                 currentInterests.push(interest);
                 saveInterests(currentInterests);
                 console.log("Interest added:", interest);
