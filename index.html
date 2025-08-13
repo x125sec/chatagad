@@ -192,6 +192,7 @@
         let currentChatId = null;
         let onlineCountListener = null;
         let endChatConfirmationTimeout = null;
+        let isChatDisconnected = false;
 
         const mainContainer = document.getElementById('main-container');
         const homeScreen = document.getElementById('home-screen');
@@ -275,8 +276,8 @@
         }
         
         window.addEventListener('beforeunload', (event) => {
-            // If in an active chat, show a confirmation message before leaving.
-            if (currentChatId) {
+            // If in an active chat that is NOT already disconnected, show a confirmation message.
+            if (currentChatId && !isChatDisconnected) {
                 const confirmationMessage = 'You are currently in a chat. Are you sure you want to leave? This will end your conversation.';
                 event.preventDefault(); // Standard for most browsers.
                 event.returnValue = confirmationMessage; // For older browsers.
@@ -435,6 +436,7 @@
         function startChatSession(chatId) {
             console.log(`[User ${currentUser.uid.substring(0,5)}] Entering chat session: ${chatId}`);
             clearTimeout(searchTimeout);
+            isChatDisconnected = false; // Reset disconnect flag for new chat
             
             if(currentUser) {
                 deleteDoc(doc(db, "queue", currentUser.uid));
@@ -501,6 +503,7 @@
             messagesContainer.innerHTML = '';
             commonInterestsDisplay.innerHTML = '';
             currentChatId = null;
+            isChatDisconnected = false; // Reset disconnect flag
             
             resetEndChatButton();
             clearTimeout(endChatConfirmationTimeout);
@@ -511,6 +514,7 @@
 
         function showPostChatActions(message) {
             addSystemMessage(message);
+            isChatDisconnected = true; // Set disconnect flag
             
             if (messageListener) messageListener();
             messageListener = null;
