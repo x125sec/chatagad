@@ -10,15 +10,50 @@
 </head>
 <body class="bg-gray-100 text-gray-800 flex justify-center">
 
+    <!-- Startup Prompt -->
+    <div id="startup-prompt" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 md:p-8 max-w-lg w-full">
+            <h2 class="text-2xl font-bold text-blue-600 dark:text-blue-500">Welcome to ChatAgad!</h2>
+            <div class="text-sm text-gray-600 dark:text-gray-300 mt-4 space-y-2 max-h-60 overflow-y-auto pr-2">
+                <p><strong>What is ChatAgad?</strong><br>ChatAgad is a place to connect with new people from around the world. It's a platform where you can talk about your interests, share experiences, and make new friends in an anonymous and friendly environment. Join us for a friendly community made for everyone aged 18 and above. Let's chat!</p>
+                <p class="mt-2"><strong>Terms and Conditions</strong><br>By using ChatAgad, you agree to the following terms:</p>
+                <ul class="list-disc list-inside space-y-1">
+                    <li>You must be at least 18 years old.</li>
+                    <li>You are solely responsible for your interactions and messages.</li>
+                    <li>Do not send any illegal, harmful, threatening, abusive, obscene, or otherwise objectionable messages.</li>
+                    <li>Do not impersonate any other person or entity.</li>
+                    <li>We reserve the right to terminate access for users who violate our community guidelines.</li>
+                </ul>
+                 <p class="mt-2"><strong>Disclaimer of Liability</strong><br>ChatAgad is provided "as is". You expressly agree that your use of ChatAgad is at your sole risk. We disclaim all liability for any damages arising from your use of this service.</p>
+            </div>
+            <div class="mt-6 space-y-3">
+                <label for="age-checkbox" class="flex items-center text-sm">
+                    <input type="checkbox" id="age-checkbox" class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                    <span class="ml-2 text-gray-700 dark:text-gray-200">I confirm that I am 18 years old or older.</span>
+                </label>
+                <label for="terms-checkbox" class="flex items-center text-sm">
+                    <input type="checkbox" id="terms-checkbox" class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                    <span class="ml-2 text-gray-700 dark:text-gray-200">I have read and agree to the Terms and Conditions.</span>
+                </label>
+            </div>
+            <div class="mt-6">
+                <button id="lets-go-btn" class="w-full bg-blue-600 text-white font-bold py-3 rounded-lg transition-colors shadow-lg text-lg disabled:bg-gray-400 disabled:cursor-not-allowed" disabled>
+                    Let's Go
+                </button>
+            </div>
+        </div>
+    </div>
+
+
     <!-- Left Ad Placeholder -->
-    <aside class="w-48 bg-gray-100 p-4 hidden lg:block sticky top-0 h-screen">
+    <aside id="left-ad" class="w-48 bg-gray-100 p-4 hidden lg:block sticky top-0 h-screen invisible">
         <div class="w-full h-96 bg-gray-100 rounded-lg mt-4"></div>
     </aside>
 
     <!-- Main Application Container -->
-    <div id="main-container" class="w-full max-w-4xl flex flex-col items-center min-h-screen bg-white shadow-2xl">
+    <div id="main-container" class="w-full max-w-4xl flex flex-col items-center min-h-screen bg-white shadow-2xl invisible">
         <!-- Home Screen -->
-        <div id="home-screen" class="w-full h-screen flex flex-col">
+        <div id="home-screen" class="w-full h-screen flex-col">
             <div class="p-4 border-b border-gray-200 shadow-sm header-bar">
                 <div class="flex justify-between items-center w-full max-w-5xl mx-auto">
                     <h1 class="text-3xl md:text-4xl font-extrabold text-blue-600">ChatAgad</h1>
@@ -95,7 +130,7 @@
     </div>
 
     <!-- Right Ad Placeholder -->
-    <aside class="w-48 bg-gray-100 p-4 hidden lg:block sticky top-0 h-screen">
+    <aside id="right-ad" class="w-48 bg-gray-100 p-4 hidden lg:block sticky top-0 h-screen invisible">
         <div class="w-full h-96 bg-gray-100 rounded-lg mt-4"></div>
     </aside>
 
