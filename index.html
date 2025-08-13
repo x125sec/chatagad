@@ -409,7 +409,8 @@
         }
 
         interestInput.addEventListener('keyup', (e) => {
-            if (e.code === 'Space' && interestInput.value.trim() !== '') {
+            if ((e.code === 'Space' || e.code === 'Enter') && interestInput.value.trim() !== '') {
+                e.preventDefault(); // Prevent form submission on Enter
                 const interest = interestInput.value.trim().toLowerCase();
                 if (!interests.includes(interest)) {
                     interests.push(interest);
