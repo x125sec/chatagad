@@ -93,8 +93,7 @@ const addInterestBtn = document.getElementById('add-interest-btn');
 
 // --- Mobile Viewport Height Fix ---
 function setScreenHeight() {
-    const vh = window.innerHeight * 0.01;
-    document.documentElement.style.setProperty('--vh', `${vh}px`);
+    mainContainer.style.height = `${window.innerHeight}px`;
 }
 setScreenHeight();
 window.addEventListener('resize', setScreenHeight);
