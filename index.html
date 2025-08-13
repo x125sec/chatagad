@@ -56,9 +56,7 @@
 
     <!-- Left Ad Placeholder -->
     <aside class="w-48 bg-gray-100 p-4 hidden lg:block sticky top-0 h-screen">
-        <div class="text-center mt-4 p-2 bg-gray-200 rounded-lg h-96">
-            <p class="text-gray-500 font-semibold">Ad Space</p>
-        </div>
+        <div class="w-full h-96 bg-gray-200 rounded-lg mt-4"></div>
     </aside>
 
     <!-- Main Application Container -->
@@ -113,6 +111,12 @@
                 <!-- Messages will be appended here -->
             </div>
             <div class="p-4 bg-white border-t border-gray-200">
+                 <!-- Mobile Ad Placeholder -->
+                <div id="mobile-ad-space" class="mb-2 lg:hidden">
+                    <div class="text-center bg-gray-200 rounded-lg h-12 flex items-center justify-center">
+                        <p class="text-gray-500 font-semibold text-sm">Ad Space</p>
+                    </div>
+                </div>
                 <div id="chat-input-area" class="flex items-center space-x-2">
                     <button id="end-chat-btn" class="bg-gray-200 text-gray-700 font-bold py-2 px-4 rounded-lg hover:bg-gray-300 transition-colors">End Chat</button>
                     <input type="text" id="message-input" placeholder="Type your message..." class="flex-1 px-4 py-2 border bg-gray-100 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500">
@@ -128,9 +132,7 @@
 
     <!-- Right Ad Placeholder -->
     <aside class="w-48 bg-gray-100 p-4 hidden lg:block sticky top-0 h-screen">
-        <div class="text-center mt-4 p-2 bg-gray-200 rounded-lg h-96">
-            <p class="text-gray-500 font-semibold">Ad Space</p>
-        </div>
+        <div class="w-full h-96 bg-gray-200 rounded-lg mt-4"></div>
     </aside>
 
     <!-- Firebase SDK -->
@@ -278,7 +280,16 @@
             }
         }
         
-        window.addEventListener('beforeunload', () => {
+        window.addEventListener('beforeunload', (event) => {
+            // If in an active chat, show a confirmation message before leaving.
+            if (currentChatId) {
+                const confirmationMessage = 'You are currently in a chat. Are you sure you want to leave? This will end your conversation.';
+                event.preventDefault(); // Standard for most browsers.
+                event.returnValue = confirmationMessage; // For older browsers.
+                return confirmationMessage; // For some other browsers.
+            }
+            
+            // Perform cleanup when the page is closed.
             if (currentUser) {
                 if (queueListener) {
                      deleteDoc(doc(db, "queue", currentUser.uid));
