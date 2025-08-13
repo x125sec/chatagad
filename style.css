@@ -8,7 +8,7 @@ body {
     transition: background-color 0.3s, color 0.3s;
 }
 #main-container {
-    height: 100vh; /* Fallback */
+    height: 100vh; /* Fallback for older browsers */
     height: calc(var(--vh, 1vh) * 100);
 }
 .interest-bubble {
