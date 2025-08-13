@@ -11,12 +11,12 @@
             font-family: 'Inter', sans-serif;
         }
         .interest-bubble {
-            position: relative; /* Required for positioning the button */
+            position: relative;
             display: inline-block;
             background-color: #e0e7ff;
             color: #4f46e5;
             border-radius: 16px;
-            padding: 8px 28px 8px 16px; /* Added more padding for the button */
+            padding: 8px 28px 8px 16px;
             margin: 4px;
             font-size: 14px;
             font-weight: 500;
@@ -24,7 +24,7 @@
         }
         .interest-bubble button {
             position: absolute;
-            top: -6px;   /* Position button at the top-right corner */
+            top: -6px;
             right: -6px;
             width: 20px;
             height: 20px;
@@ -46,6 +46,12 @@
         #messages-container {
              scrollbar-width: thin;
              scrollbar-color: #a5b4fc #e5e7eb;
+        }
+        /* Make the main container take the full screen height */
+        .full-screen-container {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
         }
     </style>
 </head>
@@ -88,19 +94,24 @@
         </div>
 
         <!-- Chat Screen -->
-        <div id="chat-screen" class="hidden w-full h-full flex flex-col bg-white rounded-lg shadow-xl" style="height: 80vh; max-height: 800px;">
-            <div class="p-4 border-b flex justify-between items-center">
-                <h2 class="font-bold text-lg">You're chatting with a stranger</h2>
+        <div id="chat-screen" class="hidden w-full h-screen flex flex-col bg-white">
+            <div class="p-4 border-b">
+                 <div class="flex justify-between items-center w-full max-w-2xl mx-auto">
+                    <h1 class="text-3xl md:text-4xl font-extrabold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">ChatAgad</h1>
+                    <div class="text-right">
+                        <p class="font-bold text-lg text-gray-700">You're chatting with a stranger</p>
+                    </div>
+                </div>
             </div>
             <div id="messages-container" class="flex-1 p-4 overflow-y-auto">
                 <!-- Messages will be appended here -->
             </div>
-            <div id="chat-input-area" class="p-4 border-t flex items-center space-x-2">
+            <div id="chat-input-area" class="p-4 border-t flex items-center space-x-2 bg-white">
                 <button id="end-chat-btn" class="bg-red-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-600 transition-colors">End Chat</button>
                 <input type="text" id="message-input" placeholder="Type your message..." class="flex-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
                 <button id="send-btn" class="bg-indigo-600 text-white font-bold py-2 px-6 rounded-r-lg hover:bg-indigo-700">Send</button>
             </div>
-            <div id="post-chat-actions" class="hidden p-4 border-t flex justify-center items-center space-x-4">
+            <div id="post-chat-actions" class="hidden p-4 border-t flex justify-center items-center space-x-4 bg-white">
                  <button id="okay-next-btn" class="bg-indigo-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-indigo-700">Okay, next</button>
                  <button id="main-menu-btn" class="bg-gray-500 text-white font-bold py-2 px-6 rounded-lg hover:bg-gray-600">Main Menu</button>
             </div>
@@ -171,6 +182,7 @@
         let onlineCountListener = null;
         let endChatConfirmationTimeout = null;
 
+        const mainContainer = document.getElementById('main-container');
         const homeScreen = document.getElementById('home-screen');
         const loadingScreen = document.getElementById('loading-screen');
         const chatScreen = document.getElementById('chat-screen');
@@ -293,6 +305,7 @@
                 addSystemMessage("Please wait, connecting to the server...");
                 return;
             }
+            mainContainer.classList.remove('max-w-4xl', 'mx-auto', 'p-4', 'min-h-screen', 'flex', 'flex-col', 'items-center', 'justify-center');
             homeScreen.classList.add('hidden');
             loadingScreen.classList.remove('hidden');
             loadingMessage.textContent = 'Looking for someone to chat with...';
@@ -304,8 +317,6 @@
                 let potentialMatches = [];
 
                 if (interests.length > 0) {
-                    // **FIX:** Due to a Firestore limitation, we query by interests first,
-                    // then filter by timestamp on the client side.
                     const interestQuery = query(queueRef, where("interests", "array-contains-any", interests));
                     const querySnapshot = await getDocs(interestQuery);
                     
@@ -317,7 +328,6 @@
                     });
 
                 } else {
-                    // If no interests, we can query directly with the timestamp.
                     const noInterestQuery = query(queueRef, 
                         where("interests", "==", []),
                         where("timestamp", ">", recentTimeThreshold)
@@ -417,6 +427,7 @@
             if(currentUser) {
                 deleteDoc(doc(db, "queue", currentUser.uid));
             }
+            mainContainer.classList.add('max-w-4xl', 'mx-auto', 'p-4', 'min-h-screen', 'flex', 'flex-col', 'items-center', 'justify-center');
             loadingScreen.classList.add('hidden');
             homeScreen.classList.remove('hidden');
         }
@@ -454,6 +465,7 @@
         }
 
         function goHome() {
+            mainContainer.classList.add('max-w-4xl', 'mx-auto', 'p-4', 'min-h-screen', 'flex', 'flex-col', 'items-center', 'justify-center');
             chatScreen.classList.add('hidden');
             homeScreen.classList.remove('hidden');
             messagesContainer.innerHTML = '';
