@@ -1,151 +1,495 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Omegle-Style Chat with Firebase</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
-    import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
-    import { 
-      getFirestore, doc, setDoc, getDoc, onSnapshot, updateDoc, deleteDoc, addDoc, collection, query, where, getDocs 
-    } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ChatAgad - Talk to Strangers</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .interest-bubble {
+            position: relative; /* Required for positioning the button */
+            display: inline-block;
+            background-color: #e0e7ff;
+            color: #4f46e5;
+            border-radius: 16px;
+            padding: 8px 28px 8px 16px; /* Added more padding for the button */
+            margin: 4px;
+            font-size: 14px;
+            font-weight: 500;
+            line-height: 1;
+        }
+        .interest-bubble button {
+            position: absolute;
+            top: -6px;   /* Position button at the top-right corner */
+            right: -6px;
+            width: 20px;
+            height: 20px;
+            background-color: #4f46e5;
+            color: white;
+            border: 2px solid white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s ease-in-out;
+        }
+        .interest-bubble button:hover {
+            transform: scale(1.1);
+        }
+        #messages-container {
+             scrollbar-width: thin;
+             scrollbar-color: #a5b4fc #e5e7eb;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800">
 
-    // Your Firebase config
-    const firebaseConfig = {
-      apiKey: "AIzaSyALyckXNK7FbzpqZGP4Lr5eVRQJVseh0fQ",
-      authDomain: "chatagad-app.firebaseapp.com",
-      projectId: "chatagad-app",
-      storageBucket: "chatagad-app.firebasestorage.app",
-      messagingSenderId: "946806283279",
-      appId: "1:946806283279:web:78ad7293e5a0a2017dd77a",
-      measurementId: "G-7J5TKXQB1X"
-    };
+    <div id="main-container" class="max-w-4xl mx-auto p-4 min-h-screen flex flex-col items-center justify-center">
+        <!-- Home Screen -->
+        <div id="home-screen" class="text-center w-full">
+            <div class="flex justify-between items-center w-full max-w-2xl mx-auto mb-4">
+                <h1 class="text-5xl md:text-6xl font-extrabold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">ChatAgad</h1>
+                <div id="online-counter" class="flex items-center space-x-2 bg-white px-4 py-2 rounded-full shadow-md">
+                    <div class="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+                    <div>
+                        <span id="online-users" class="font-bold text-gray-800">0</span>
+                        <span class="text-gray-600">online</span>
+                    </div>
+                </div>
+            </div>
+            <p class="text-lg text-gray-500 mt-4 tracking-tight">Connect with strangers anonymously based on your interests.</p>
 
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const db = getFirestore(app);
+            <div class="mt-8 max-w-lg mx-auto">
+                <h2 class="text-lg font-semibold mb-2">Add your interests (optional)</h2>
+                <div id="interests-container" class="flex flex-wrap justify-center mb-4 min-h-[36px]"></div>
+                <input type="text" id="interest-input" placeholder="Type an interest and press space..." class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+            </div>
 
-    let currentUser = null;
-    let currentChatId = null;
-    let queueRef = null;
-    let chatUnsub = null;
-    let messagesUnsub = null;
+            <div class="mt-8">
+                <button id="start-chat-btn" class="bg-indigo-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-indigo-700 transition-colors shadow-lg">
+                    Start Chat
+                </button>
+            </div>
+        </div>
 
-    const statusEl = document.getElementById("status");
-    const messagesEl = document.getElementById("messages");
-    const messageInput = document.getElementById("messageInput");
-    const sendBtn = document.getElementById("sendBtn");
+        <!-- Loading Screen -->
+        <div id="loading-screen" class="hidden text-center">
+            <div class="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-indigo-600 mx-auto"></div>
+            <p class="mt-4 text-lg font-semibold">Finding a stranger to chat with...</p>
+            <p id="loading-message" class="text-gray-500 mt-2"></p>
+            <button id="cancel-search-btn" class="mt-4 bg-gray-300 text-gray-700 font-bold py-2 px-6 rounded-lg hover:bg-gray-400">Cancel</button>
+        </div>
 
-    function appendMessage(sender, text) {
-      const msgDiv = document.createElement("div");
-      msgDiv.className = sender === "me" ? "text-right text-blue-500" : "text-left text-green-500";
-      msgDiv.textContent = text;
-      messagesEl.appendChild(msgDiv);
-      messagesEl.scrollTop = messagesEl.scrollHeight;
-    }
+        <!-- Chat Screen -->
+        <div id="chat-screen" class="hidden w-full h-full flex flex-col bg-white rounded-lg shadow-xl" style="height: 80vh; max-height: 800px;">
+            <div class="p-4 border-b flex justify-between items-center">
+                <h2 class="font-bold text-lg">You're chatting with a stranger</h2>
+                <button id="disconnect-btn" class="bg-red-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-600">Disconnect</button>
+            </div>
+            <div id="messages-container" class="flex-1 p-4 overflow-y-auto">
+                <!-- Messages will be appended here -->
+            </div>
+            <div class="p-4 border-t flex">
+                <input type="text" id="message-input" placeholder="Type your message..." class="flex-1 px-4 py-2 border rounded-l-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                <button id="send-btn" class="bg-indigo-600 text-white font-bold py-2 px-6 rounded-r-lg hover:bg-indigo-700">Send</button>
+            </div>
+        </div>
+    </div>
 
-    async function joinQueue() {
-      statusEl.textContent = "Joining queue...";
-      queueRef = doc(db, "queue", currentUser.uid);
-      await setDoc(queueRef, { timestamp: Date.now() });
+    <!-- Firebase SDK -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc, deleteDoc, onSnapshot, collection, query, where, getDocs, addDoc, serverTimestamp, updateDoc, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-      // Search for another user in the queue
-      const q = query(collection(db, "queue"), where("__name__", "!=", currentUser.uid));
-      const snapshot = await getDocs(q);
-      if (!snapshot.empty) {
-        const other = snapshot.docs[0];
-        // Create a chat
-        const chatRef = doc(collection(db, "chats"));
-        await setDoc(chatRef, { 
-          user1: currentUser.uid,
-          user2: other.id
-        });
-        // Remove both from queue
-        await deleteDoc(queueRef);
-        await deleteDoc(other.ref);
-        startChat(chatRef.id);
-      } else {
-        // Wait until matched
-        onSnapshot(doc(db, "queue", currentUser.uid), async (docSnap) => {
-          if (!docSnap.exists()) {
-            // Probably matched by another user
-            // Find our chat
-            const chatQ = query(
-              collection(db, "chats"), 
-              where("user1", "==", currentUser.uid)
-            );
-            const chatSnap = await getDocs(chatQ);
-            if (!chatSnap.empty) {
-              startChat(chatSnap.docs[0].id);
-            } else {
-              const chatSnap2 = await getDocs(
-                query(collection(db, "chats"), where("user2", "==", currentUser.uid))
-              );
-              if (!chatSnap2.empty) {
-                startChat(chatSnap2.docs[0].id);
+        /*
+         * ===================================================================================
+         * IMPORTANT: Please update your Firestore Security Rules with the following rules
+         * to fix the permission errors and secure your database.
+         * ===================================================================================
+         *
+            rules_version = '2';
+            service cloud.firestore {
+              match /databases/{database}/documents {
+                
+                // Tracks online users. Anyone can read, but you can only write your own status.
+                match /status/{userId} {
+                  allow read: if request.auth != null;
+                  allow write, delete: if request.auth.uid == userId;
+                }
+            
+                // **FIXED RULE**: This explicitly allows querying the 'queue' collection
+                match /queue {
+                    allow list: if request.auth != null;
+                }
+
+                // Rule for accessing individual documents in the queue
+                match /queue/{userId} {
+                  // You can only create or delete your own queue entry.
+                  allow create, delete: if request.auth.uid == userId;
+                  // Anyone can UPDATE an entry to signal a match. This is key for the matching logic.
+                  allow get, update: if request.auth != null; 
+                }
+            
+                // Chat documents.
+                match /chats/{chatId} {
+                  // You can only read/write a chat if you are a participant.
+                  allow read, write: if request.auth.uid in resource.data.participants;
+                  
+                  // Messages subcollection within a chat.
+                  match /messages/{messageId} {
+                    // You can only read/write messages if you are a participant of the parent chat.
+                    allow read, write: if request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants;
+                  }
+                }
               }
             }
-          }
+         *
+         */
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyALyckXNK7FbzpqZGP4Lr5eVRQJVseh0fQ",
+            authDomain: "chatagad-app.firebaseapp.com",
+            projectId: "chatagad-app",
+            storageBucket: "chatagad-app.firebasestorage.app",
+            messagingSenderId: "946806283279",
+            appId: "1:946806283279:web:78ad7293e5a0a2017dd77a",
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        let currentUser = null;
+        let interests = [];
+        let searchTimeout;
+        let queueListener = null; 
+        let messageListener = null;
+        let currentChatId = null;
+        let onlineCountListener = null;
+
+        const homeScreen = document.getElementById('home-screen');
+        const loadingScreen = document.getElementById('loading-screen');
+        const chatScreen = document.getElementById('chat-screen');
+        const interestInput = document.getElementById('interest-input');
+        const interestsContainer = document.getElementById('interests-container');
+        const startChatBtn = document.getElementById('start-chat-btn');
+        const onlineUsersEl = document.getElementById('online-users');
+        const loadingMessage = document.getElementById('loading-message');
+        const cancelSearchBtn = document.getElementById('cancel-search-btn');
+        const disconnectBtn = document.getElementById('disconnect-btn');
+        const messagesContainer = document.getElementById('messages-container');
+        const messageInput = document.getElementById('message-input');
+        const sendBtn = document.getElementById('send-btn');
+
+        // --- Main Application Logic ---
+        async function main() {
+            try {
+                if (auth.currentUser) {
+                    currentUser = auth.currentUser;
+                } else {
+                    const userCredential = await signInAnonymously(auth);
+                    currentUser = userCredential.user;
+                }
+                
+                initializeOnlineFeatures();
+                
+                // Set an initial heartbeat and then update it periodically
+                await updateUserHeartbeat();
+                setInterval(updateUserHeartbeat, 30000); // every 30 seconds
+
+            } catch (error) {
+                console.error("Authentication failed:", error);
+                document.body.innerHTML = '<div class="text-center text-red-500 p-8">Could not connect to the server. Please refresh the page.</div>';
+            }
+        }
+        
+        function initializeOnlineFeatures() {
+            if (onlineCountListener) return;
+
+            const statusRef = collection(db, "status");
+            onlineCountListener = onSnapshot(statusRef, (snapshot) => {
+                let onlineCount = 0;
+                const now = Date.now();
+                snapshot.forEach(doc => {
+                    const userStatus = doc.data();
+                    if (userStatus.timestamp) {
+                        const lastSeen = userStatus.timestamp.toMillis();
+                        if ((now - lastSeen) < 60000) { // 60-second threshold
+                            onlineCount++;
+                        }
+                    }
+                });
+                onlineUsersEl.textContent = onlineCount;
+            }, (error) => {
+                console.error("Error getting online users count:", error);
+                onlineUsersEl.textContent = 'N/A';
+            });
+        }
+
+        async function updateUserHeartbeat() {
+            if (!currentUser) return;
+            const userStatusRef = doc(db, "status", currentUser.uid);
+            try {
+                await setDoc(userStatusRef, { 
+                    timestamp: serverTimestamp() 
+                }, { merge: true });
+            } catch (error) {
+                console.error("Failed to update user heartbeat:", error);
+            }
+        }
+        
+        window.addEventListener('beforeunload', () => {
+            if (currentUser) {
+                if (queueListener) {
+                     deleteDoc(doc(db, "queue", currentUser.uid));
+                }
+                deleteDoc(doc(db, "status", currentUser.uid));
+            }
         });
-      }
-    }
 
-    function startChat(chatId) {
-      currentChatId = chatId;
-      statusEl.textContent = "Connected! Say hi!";
-      // Listen for messages
-      const msgsRef = collection(db, "chats", chatId, "messages");
-      messagesUnsub = onSnapshot(msgsRef, (snap) => {
-        snap.docChanges().forEach(change => {
-          if (change.type === "added") {
-            const data = change.doc.data();
-            appendMessage(data.sender === currentUser.uid ? "me" : "other", data.text);
-          }
+        // --- Interests Handling ---
+        interestInput.addEventListener('keyup', (e) => {
+            if (e.code === 'Space' && interestInput.value.trim() !== '') {
+                const interest = interestInput.value.trim().toLowerCase();
+                if (!interests.includes(interest)) {
+                    interests.push(interest);
+                    renderInterests();
+                }
+                interestInput.value = '';
+            }
         });
-      });
-    }
 
-    async function sendMessage() {
-      const text = messageInput.value.trim();
-      if (!text) return;
-      const msgsRef = collection(db, "chats", currentChatId, "messages");
-      await addDoc(msgsRef, { sender: currentUser.uid, text, timestamp: Date.now() });
-      messageInput.value = "";
-    }
+        function renderInterests() {
+            interestsContainer.innerHTML = '';
+            interests.forEach(interest => {
+                const bubble = document.createElement('div');
+                bubble.className = 'interest-bubble';
+                bubble.textContent = interest;
+                const removeBtn = document.createElement('button');
+                removeBtn.innerHTML = '&times;'; // Use HTML entity for a cleaner 'x'
+                removeBtn.onclick = () => {
+                    interests = interests.filter(i => i !== interest);
+                    renderInterests();
+                };
+                bubble.appendChild(removeBtn);
+                interestsContainer.appendChild(bubble);
+            });
+        }
 
-    sendBtn.addEventListener("click", sendMessage);
-    messageInput.addEventListener("keypress", (e) => {
-      if (e.key === "Enter") sendMessage();
-    });
+        // --- Chat Logic ---
+        startChatBtn.addEventListener('click', startSearch);
+        cancelSearchBtn.addEventListener('click', cancelSearch);
 
-    // Auto-remove from queue when leaving
-    window.addEventListener("beforeunload", async () => {
-      if (queueRef) {
-        try {
-          await deleteDoc(queueRef);
-        } catch {}
-      }
-    });
+        async function startSearch() {
+            if (!currentUser) {
+                addSystemMessage("Please wait, connecting to the server...");
+                return;
+            }
+            homeScreen.classList.add('hidden');
+            loadingScreen.classList.remove('hidden');
+            loadingMessage.textContent = 'Looking for someone to chat with...';
+            
+            try {
+                const queueRef = collection(db, "queue");
+                let q;
 
-    // Start
-    onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        currentUser = user;
-        joinQueue();
-      } else {
-        await signInAnonymously(auth);
-      }
-    });
-  </script>
-</head>
-<body class="bg-gray-900 text-white flex flex-col items-center justify-center h-screen">
-  <h1 class="text-2xl font-bold mb-4">Omegle-Style Chat</h1>
-  <div id="status" class="mb-4">Connecting...</div>
-  <div id="messages" class="bg-gray-800 p-4 w-96 h-64 overflow-y-auto mb-4 rounded"></div>
-  <div class="flex w-96">
-    <input id="messageInput" class="flex-1 p-2 rounded-l text-black" placeholder="Type a message..." />
-    <button id="sendBtn" class="bg-blue-500 px-4 rounded-r">Send</button>
-  </div>
+                if (interests.length > 0) {
+                    q = query(queueRef, where("interests", "array-contains-any", interests));
+                } else {
+                    q = query(queueRef, where("interests", "==", []));
+                }
+
+                const querySnapshot = await getDocs(q);
+                let matchFound = false;
+
+                for (const userDoc of querySnapshot.docs) {
+                    if (userDoc.id !== currentUser.uid) {
+                        const strangerId = userDoc.id;
+                        await initiateChat(strangerId);
+                        matchFound = true;
+                        return;
+                    }
+                }
+
+                if (!matchFound) {
+                    const userQueueDocRef = doc(db, "queue", currentUser.uid);
+                    await setDoc(userQueueDocRef, {
+                        interests: interests,
+                        timestamp: serverTimestamp()
+                    });
+                    
+                    queueListener = onSnapshot(userQueueDocRef, (docSnap) => {
+                        const data = docSnap.data();
+                        if (data && data.matchedInChat) {
+                            startChatSession(data.matchedInChat);
+                            deleteDoc(userQueueDocRef);
+                        }
+                    });
+
+                    searchTimeout = setTimeout(() => {
+                        loadingMessage.innerHTML = "Can't find a match. Try adding more interests or <a href='#' id='remove-interests-link' class='text-indigo-600'>removing them</a> for a faster search.";
+                        document.getElementById('remove-interests-link')?.addEventListener('click', (e) => {
+                            e.preventDefault();
+                            interests = [];
+                            renderInterests();
+                            cancelSearch();
+                            startSearch();
+                        });
+                    }, 15000);
+                }
+
+            } catch (error) {
+                console.error("Error starting search:", error);
+                addSystemMessage("An error occurred during search. Please try again.");
+                cancelSearch();
+            }
+        }
+        
+        async function initiateChat(strangerId) {
+            const newChatRef = await addDoc(collection(db, "chats"), {
+                participants: [currentUser.uid, strangerId],
+                createdAt: serverTimestamp(),
+                disconnected: null,
+            });
+            await updateDoc(doc(db, "queue", strangerId), {
+                matchedInChat: newChatRef.id
+            });
+            startChatSession(newChatRef.id);
+        }
+
+        function startChatSession(chatId) {
+            clearTimeout(searchTimeout);
+            if(queueListener) queueListener();
+            queueListener = null;
+
+            currentChatId = chatId;
+            loadingScreen.classList.add('hidden');
+            chatScreen.classList.remove('hidden');
+            listenForMessages(chatId);
+        }
+
+        function cancelSearch() {
+            clearTimeout(searchTimeout);
+            if(queueListener) queueListener();
+            queueListener = null;
+            if(currentUser) {
+                deleteDoc(doc(db, "queue", currentUser.uid));
+            }
+            loadingScreen.classList.add('hidden');
+            homeScreen.classList.remove('hidden');
+        }
+
+        disconnectBtn.addEventListener('click', async () => {
+            if (currentChatId) {
+                try {
+                    const chatDocRef = doc(db, "chats", currentChatId);
+                    await updateDoc(chatDocRef, { disconnected: currentUser.uid });
+                } catch(e) {
+                    console.error("Error disconnecting:", e);
+                }
+                endChat("You have disconnected.");
+            }
+        });
+
+        function endChat(systemMessage) {
+            if (systemMessage) addSystemMessage(systemMessage);
+            
+            if (messageListener) messageListener();
+            messageListener = null;
+            
+            chatScreen.classList.add('hidden');
+            homeScreen.classList.remove('hidden');
+            messagesContainer.innerHTML = '';
+            currentChatId = null;
+        }
+
+        // --- Messaging ---
+        sendBtn.addEventListener('click', sendMessage);
+        messageInput.addEventListener('keyup', (e) => {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+
+        async function sendMessage() {
+            const text = messageInput.value.trim();
+            if (text === '' || !currentChatId) return;
+
+            try {
+                const messagesRef = collection(db, "chats", currentChatId, "messages");
+                await addDoc(messagesRef, {
+                    senderId: currentUser.uid,
+                    text: text,
+                    timestamp: serverTimestamp()
+                });
+                messageInput.value = '';
+                messageInput.focus();
+            } catch (error) {
+                console.error("Error sending message:", error);
+                addSystemMessage("Error: Could not send message.");
+            }
+        }
+
+        function listenForMessages(chatId) {
+            const chatDocRef = doc(db, "chats", chatId);
+            messageListener = onSnapshot(chatDocRef, (docSnap) => {
+                if (docSnap.data()?.disconnected && docSnap.data()?.disconnected !== currentUser.uid) {
+                    endChat("Stranger has disconnected.");
+                }
+            });
+
+            const messagesRef = collection(db, "chats", chatId, "messages");
+            const q = query(messagesRef, orderBy("timestamp", "asc"));
+
+            onSnapshot(q, (snapshot) => {
+                snapshot.docChanges().forEach((change) => {
+                    if (change.type === "added") {
+                        const msg = change.doc.data();
+                        displayMessage(msg);
+                    }
+                });
+            }, (error) => {
+                console.error("Error listening for messages:", error);
+                endChat("Error loading chat. Disconnecting.");
+            });
+        }
+
+        function displayMessage(msg) {
+            const msgDiv = document.createElement('div');
+            const p = document.createElement('p');
+            p.textContent = msg.text;
+
+            msgDiv.classList.add('mb-2', 'max-w-xs', 'p-2', 'rounded-lg', 'w-fit');
+
+            if (msg.senderId === currentUser.uid) {
+                msgDiv.classList.add('bg-indigo-500', 'text-white', 'ml-auto');
+            } else {
+                msgDiv.classList.add('bg-gray-200', 'text-gray-800', 'mr-auto');
+            }
+            msgDiv.appendChild(p);
+            messagesContainer.appendChild(msgDiv);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        function addSystemMessage(text) {
+            const msgDiv = document.createElement('div');
+            msgDiv.className = 'text-center text-sm text-gray-500 my-2 italic';
+            msgDiv.textContent = text;
+            messagesContainer.appendChild(msgDiv);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        // Start the application
+        main();
+
+    </script>
 </body>
 </html>
