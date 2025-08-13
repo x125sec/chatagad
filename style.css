@@ -2,11 +2,15 @@ html, body {
     height: 100%;
     margin: 0;
     padding: 0;
-    overflow: hidden; /* Prevent the main page from scrolling */
+    /* overflow: hidden; is removed to improve mobile viewport handling */
 }
 body {
     font-family: 'Segoe UI', 'Inter', sans-serif;
     transition: background-color 0.3s, color 0.3s;
+}
+/* FIX: Ensure the main container and chat screen use the full available height */
+#main-container, #home-screen, #chat-screen, #loading-screen {
+    height: 100%;
 }
 .interest-bubble {
     position: relative;
