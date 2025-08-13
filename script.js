@@ -95,8 +95,11 @@ const addInterestBtn = document.getElementById('add-interest-btn');
 function setScreenHeight() {
     mainContainer.style.height = `${window.innerHeight}px`;
 }
-setScreenHeight();
 window.addEventListener('resize', setScreenHeight);
+// Also set height when the virtual keyboard appears/disappears on some mobile browsers
+if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', setScreenHeight);
+}
 
 
 // --- Theme Toggle ---
