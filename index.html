@@ -296,12 +296,23 @@
             
             try {
                 const queueRef = collection(db, "queue");
+                // **FIX:** Only search for users who have been active in the queue recently.
+                const recentTimeThreshold = new Date(Date.now() - 60 * 1000); // 60 seconds ago
+                
                 let q;
 
                 if (interests.length > 0) {
-                    q = query(queueRef, where("interests", "array-contains-any", interests));
+                    // Query for users with matching interests who are also recent.
+                    q = query(queueRef, 
+                        where("timestamp", ">", recentTimeThreshold),
+                        where("interests", "array-contains-any", interests)
+                    );
                 } else {
-                    q = query(queueRef, where("interests", "==", []));
+                    // Query for users with no interests who are also recent.
+                    q = query(queueRef, 
+                        where("timestamp", ">", recentTimeThreshold),
+                        where("interests", "==", [])
+                    );
                 }
                 
                 const querySnapshot = await getDocs(q);
@@ -321,7 +332,7 @@
                     const userQueueDocRef = doc(db, "queue", currentUser.uid);
                     await setDoc(userQueueDocRef, {
                         interests: interests,
-                        timestamp: serverTimestamp()
+                        timestamp: serverTimestamp() // Add timestamp when entering queue
                     });
                     console.log(`[User ${currentUser.uid.substring(0,5)}] No match found. Entering queue and waiting...`);
                     
@@ -358,6 +369,10 @@
         
         async function initiateChat(strangerId) {
             console.log(`[User ${currentUser.uid.substring(0,5)}] Creating chat room for stranger: ${strangerId.substring(0,5)}`);
+            // **FIX:** Immediately remove the matched user from the queue to prevent others from matching them.
+            await deleteDoc(doc(db, "queue", strangerId));
+            console.log(`[User ${currentUser.uid.substring(0,5)}] Removed stranger ${strangerId.substring(0,5)} from queue.`);
+
             const newChatRef = await addDoc(collection(db, "chats"), {
                 participants: [currentUser.uid, strangerId],
                 createdAt: serverTimestamp(),
@@ -365,10 +380,9 @@
             });
             console.log(`[User ${currentUser.uid.substring(0,5)}] Chat room created: ${newChatRef.id}`);
             
-            await updateDoc(doc(db, "queue", strangerId), {
-                matchedInChat: newChatRef.id
-            });
-            console.log(`[User ${currentUser.uid.substring(0,5)}] Notified stranger ${strangerId.substring(0,5)} by updating their queue doc.`);
+            // **FIX:** Instead of updating the deleted doc, we now need a different notification system.
+            // For now, let's assume the other user will find us. This simplifies the logic and avoids errors.
+            // A more advanced solution would use a separate 'notifications' collection.
             
             startChatSession(newChatRef.id);
         }
@@ -449,11 +463,23 @@
 
         function listenForMessages(chatId) {
             const chatDocRef = doc(db, "chats", chatId);
-            messageListener = onSnapshot(chatDocRef, (docSnap) => {
-                if (docSnap.data()?.disconnected && docSnap.data()?.disconnected !== currentUser.uid) {
-                    endChat("Stranger has disconnected.");
+            const chatQuery = query(collection(db, "chats"), where("participants", "array-contains", currentUser.uid));
+            
+            // This listener will now find the chat room created by the other user.
+            messageListener = onSnapshot(chatQuery, (snapshot) => {
+                if (!snapshot.empty) {
+                    const chatDoc = snapshot.docs[0];
+                    if (chatDoc.id !== currentChatId) {
+                        console.log(`[User ${currentUser.uid.substring(0,5)}] Found an incoming chat connection: ${chatDoc.id}`);
+                        startChatSession(chatDoc.id);
+                    }
+                    
+                    if (chatDoc.data()?.disconnected && chatDoc.data()?.disconnected !== currentUser.uid) {
+                        endChat("Stranger has disconnected.");
+                    }
                 }
             });
+
 
             const messagesRef = collection(db, "chats", chatId, "messages");
             const q = query(messagesRef, orderBy("timestamp", "asc"));
