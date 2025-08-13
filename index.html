@@ -9,6 +9,7 @@
     <style>
         body {
             font-family: 'Segoe UI', 'Inter', sans-serif;
+            transition: background-color 0.3s, color 0.3s;
         }
         .interest-bubble {
             position: relative;
@@ -65,6 +66,28 @@
             0%, 80%, 100% { transform: scale(0); }
             40% { transform: scale(1.0); }
         }
+        
+        /* Dark Mode Styles */
+        .dark body { background-color: #1c1e21; color: #e4e6eb; }
+        .dark #main-container { background-color: #242526; box-shadow: 0 0 15px rgba(0,0,0,0.5); }
+        .dark .text-blue-600 { color: #4b9cff; }
+        .dark #online-counter, .dark .header-bar { background-color: #3a3b3c; border-color: #4e4f50; }
+        .dark .text-gray-800 { color: #e4e6eb; }
+        .dark .text-gray-600, .dark .text-gray-500 { color: #b0b3b8; }
+        .dark .text-gray-700 { color: #dadde1; }
+        .dark #interest-input { background-color: #3a3b3c; border-color: #4e4f50; color: #e4e6eb; }
+        .dark .interest-bubble { background-color: #2d88ff; color: white; }
+        .dark .interest-bubble button { background-color: #fff; color: #2d88ff; }
+        .dark .chat-bg { background-color: #18191a; }
+        .dark #messages-container { scrollbar-color: #4e4f50 #18191a; }
+        .dark #chat-screen .border-gray-200 { border-color: #3e4042; }
+        .dark #chat-screen .bg-white { background-color: #242526; }
+        .dark #message-input { background-color: #3a3b3c; border-color: #4e4f50; }
+        .dark .bg-gray-200 { background-color: #3a3b3c; }
+        .dark .text-gray-700 { color: #e4e6eb; }
+        .dark .bg-gray-100 { background-color: #1c1e21; }
+        .dark aside { background-color: #1c1e21; }
+        .dark aside div { background-color: #1c1e21; }
     </style>
 </head>
 <body class="bg-gray-100 text-gray-800 flex justify-center">
@@ -78,15 +101,21 @@
     <div id="main-container" class="w-full max-w-4xl flex flex-col items-center min-h-screen bg-white shadow-2xl">
         <!-- Home Screen -->
         <div id="home-screen" class="w-full h-screen flex flex-col">
-            <div class="p-4 border-b border-gray-200 shadow-sm">
+            <div class="p-4 border-b border-gray-200 shadow-sm header-bar">
                 <div class="flex justify-between items-center w-full max-w-5xl mx-auto">
                     <h1 class="text-3xl md:text-4xl font-extrabold text-blue-600">ChatAgad</h1>
-                    <div id="online-counter" class="flex items-center space-x-2 bg-white px-4 py-2 rounded-full shadow-md border border-gray-200">
-                        <div class="w-3 h-3 bg-green-500 rounded-full"></div>
-                        <div>
-                            <span id="online-users" class="font-bold text-gray-800">0</span>
-                            <span class="text-gray-500">online</span>
+                    <div class="flex items-center space-x-4">
+                        <div id="online-counter" class="flex items-center space-x-2 bg-white px-4 py-2 rounded-full shadow-md border border-gray-200">
+                            <div class="w-3 h-3 bg-green-500 rounded-full"></div>
+                            <div>
+                                <span id="online-users" class="font-bold text-gray-800">0</span>
+                                <span class="text-gray-500">online</span>
+                            </div>
                         </div>
+                        <button id="theme-toggle-btn-home" class="p-2 rounded-full bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-200">
+                            <svg id="sun-icon-home" class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 14.95a1 1 0 010-1.414l.707-.707a1 1 0 011.414 1.414l-.707.707a1 1 0 01-1.414 0zM5 11a1 1 0 100-2H4a1 1 0 100 2h1z"/></svg>
+                            <svg id="moon-icon-home" class="w-5 h-5 hidden" fill="currentColor" viewBox="0 0 20 20"><path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path></svg>
+                        </button>
                     </div>
                 </div>
             </div>
@@ -117,9 +146,13 @@
 
         <!-- Chat Screen -->
         <div id="chat-screen" class="hidden w-full h-screen flex flex-col">
-             <div class="p-4 border-b border-gray-200 shadow-sm">
+             <div class="p-4 border-b border-gray-200 shadow-sm header-bar">
                  <div class="flex justify-between items-center w-full max-w-5xl mx-auto">
                     <h1 class="text-3xl md:text-4xl font-extrabold text-blue-600">ChatAgad</h1>
+                    <button id="theme-toggle-btn-chat" class="p-2 rounded-full bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-200">
+                        <svg id="sun-icon-chat" class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 14.95a1 1 0 010-1.414l.707-.707a1 1 0 011.414 1.414l-.707.707a1 1 0 01-1.414 0zM5 11a1 1 0 100-2H4a1 1 0 100 2h1z"/></svg>
+                        <svg id="moon-icon-chat" class="w-5 h-5 hidden" fill="currentColor" viewBox="0 0 20 20"><path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path></svg>
+                    </button>
                 </div>
             </div>
             <div class="text-center py-2 border-b border-gray-200">
@@ -234,6 +267,50 @@
         const okayNextBtn = document.getElementById('okay-next-btn');
         const mainMenuBtn = document.getElementById('main-menu-btn');
         const commonInterestsDisplay = document.getElementById('common-interests-display');
+
+        // --- Theme Toggle ---
+        const themeToggleBtnHome = document.getElementById('theme-toggle-btn-home');
+        const sunIconHome = document.getElementById('sun-icon-home');
+        const moonIconHome = document.getElementById('moon-icon-home');
+        const themeToggleBtnChat = document.getElementById('theme-toggle-btn-chat');
+        const sunIconChat = document.getElementById('sun-icon-chat');
+        const moonIconChat = document.getElementById('moon-icon-chat');
+
+        function applyTheme(theme) {
+            if (theme === 'dark') {
+                document.documentElement.classList.add('dark');
+                sunIconHome.classList.add('hidden');
+                moonIconHome.classList.remove('hidden');
+                sunIconChat.classList.add('hidden');
+                moonIconChat.classList.remove('hidden');
+            } else {
+                document.documentElement.classList.remove('dark');
+                sunIconHome.classList.remove('hidden');
+                moonIconHome.classList.add('hidden');
+                sunIconChat.classList.remove('hidden');
+                moonIconChat.classList.add('hidden');
+            }
+        }
+
+        function toggleTheme() {
+            const isDark = document.documentElement.classList.toggle('dark');
+            const newTheme = isDark ? 'dark' : 'light';
+            localStorage.setItem('theme', newTheme);
+            applyTheme(newTheme);
+        }
+
+        themeToggleBtnHome.addEventListener('click', toggleTheme);
+        themeToggleBtnChat.addEventListener('click', toggleTheme);
+
+        // Check for saved theme preference on load
+        const savedTheme = localStorage.getItem('theme');
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        if (savedTheme) {
+            applyTheme(savedTheme);
+        } else if (prefersDark) {
+            applyTheme('dark');
+        }
+
 
         // --- Main Application Logic ---
         async function main() {
