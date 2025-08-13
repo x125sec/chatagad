@@ -2,11 +2,14 @@ html, body {
     height: 100%;
     margin: 0;
     padding: 0;
-    overflow: hidden; /* Prevent the main page from scrolling */
 }
 body {
     font-family: 'Segoe UI', 'Inter', sans-serif;
     transition: background-color 0.3s, color 0.3s;
+}
+#main-container {
+    height: 100vh; /* Fallback */
+    height: calc(var(--vh, 1vh) * 100);
 }
 .interest-bubble {
     position: relative;
