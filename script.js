@@ -88,6 +88,7 @@ const termsCheckbox = document.getElementById('terms-checkbox');
 const letsGoBtn = document.getElementById('lets-go-btn');
 const leftAd = document.getElementById('left-ad');
 const rightAd = document.getElementById('right-ad');
+const addInterestBtn = document.getElementById('add-interest-btn');
 
 // --- Theme Toggle ---
 const themeToggleBtnHome = document.getElementById('theme-toggle-btn-home');
@@ -259,7 +260,6 @@ function loadInterests() {
     }
 }
 
-// **FIX:** Replaced 'keyup' with more reliable 'input' and 'keydown' events for mobile compatibility.
 function addInterestFromInput() {
     const interest = interestInput.value.trim().toLowerCase();
     if (interest) {
@@ -271,17 +271,19 @@ function addInterestFromInput() {
     }
 }
 
+addInterestBtn.addEventListener('click', addInterestFromInput);
+
 interestInput.addEventListener('input', (e) => {
-    // The 'input' event is reliable for detecting spaces on mobile.
     if (interestInput.value.endsWith(' ')) {
+        // Remove the space before adding the interest
+        interestInput.value = interestInput.value.trim();
         addInterestFromInput();
     }
 });
 
 interestInput.addEventListener('keydown', (e) => {
-    // The 'keydown' event is reliable for detecting the Enter key.
     if (e.key === 'Enter') {
-        e.preventDefault(); // Prevent form submission
+        e.preventDefault(); 
         addInterestFromInput();
     }
 });
