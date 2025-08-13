@@ -1,87 +1,17 @@
-<!doctype html>
-<html lang="en">
+<!DOCTYPE html>
+<html>
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Stranger Chat — Firebase (Omegle-Style)</title>
+  <meta charset="UTF-8" />
+  <title>Omegle-Style Chat with Firebase</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-  <style>
-    body { font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
-    .bubble-me { @apply bg-blue-600 text-white; }
-    .bubble-them { @apply bg-gray-200 text-gray-900; }
-    .scroll-shadow {
-      box-shadow: inset 0 6px 6px -6px rgba(0,0,0,.12), inset 0 -6px 6px -6px rgba(0,0,0,.12);
-    }
-  </style>
-</head>
-<body class="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100">
-  <div class="max-w-4xl mx-auto p-4 md:p-8">
-    <header class="flex items-center justify-between mb-4">
-      <h1 class="text-2xl md:text-3xl font-bold">Stranger Chat</h1>
-      <div id="statusDot" class="flex items-center gap-2 text-sm">
-        <span class="inline-block h-2.5 w-2.5 rounded-full bg-gray-300" id="connDot"></span>
-        <span id="connText" class="text-gray-600">Disconnected</span>
-      </div>
-    </header>
-
-    <section class="grid md:grid-cols-3 gap-4">
-      <aside class="md:col-span-1">
-        <div class="bg-white rounded-2xl shadow p-4 space-y-3">
-          <h2 class="font-semibold">Match Settings</h2>
-          <label class="block text-sm text-gray-600">Interests (comma separated)</label>
-          <input id="interestsInput" class="w-full rounded-xl border border-slate-200 px-3 py-2" placeholder="e.g. crypto, anime, coding" />
-
-          <div class="flex gap-2 pt-2">
-            <button id="startBtn" class="flex-1 rounded-2xl bg-blue-600 text-white px-4 py-2 font-semibold hover:bg-blue-700 disabled:opacity-50">Start</button>
-            <button id="nextBtn" class="rounded-2xl bg-indigo-600 text-white px-4 py-2 font-semibold hover:bg-indigo-700 disabled:opacity-50" disabled>Next</button>
-          </div>
-          <button id="stopBtn" class="w-full rounded-2xl bg-gray-900 text-white px-4 py-2 font-semibold hover:bg-black disabled:opacity-50" disabled>Stop</button>
-
-          <div class="text-xs text-gray-500 pt-2">
-            • Anonymous by default (Firebase Anonymous Auth).<br/>
-            • Matches are random, optionally filtered by shared interests.<br/>
-            • Messages auto-delete after 24 hours.
-          </div>
-        </div>
-
-        <div class="bg-white rounded-2xl shadow p-4 mt-4 space-y-3">
-          <h2 class="font-semibold">Safety</h2>
-          <button id="reportBtn" class="w-full rounded-xl border border-red-600 text-red-700 px-3 py-2 hover:bg-red-50 disabled:opacity-50" disabled>Report This Chat</button>
-          <textarea id="reportReason" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" placeholder="What happened? (optional)" disabled></textarea>
-        </div>
-      </aside>
-
-      <main class="md:col-span-2">
-        <div class="bg-white rounded-2xl shadow h-[70vh] flex flex-col">
-          <div id="roomBanner" class="px-4 py-2 text-xs text-gray-500 border-b border-slate-100">Waiting to start…</div>
-          <div id="messages" class="flex-1 overflow-y-auto p-4 space-y-2 scroll-shadow"></div>
-          <div class="border-t border-slate-100 p-2 flex items-end gap-2">
-            <input id="msgInput" class="flex-1 rounded-xl border border-slate-200 px-3 py-2" placeholder="Type a message" disabled />
-            <button id="sendBtn" class="rounded-xl bg-blue-600 text-white px-4 py-2 font-semibold hover:bg-blue-700 disabled:opacity-50" disabled>Send</button>
-          </div>
-        </div>
-      </main>
-    </section>
-
-    <footer class="text-xs text-gray-500 text-center mt-6">
-      Built with Firebase Firestore & Auth. Demo quality — add your own moderation & TOS.
-    </footer>
-  </div>
-
-  <!-- Firebase (Modular, ESM) -->
   <script type="module">
-    // --- Firebase imports ---
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
-    import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-analytics.js";
-    import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
-    import {
-      getFirestore, collection, doc, addDoc, getDoc, getDocs, onSnapshot, query, where, orderBy, limit, serverTimestamp, setDoc, updateDoc, deleteDoc, runTransaction
-    } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+    import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
+    import { 
+      getFirestore, doc, setDoc, getDoc, onSnapshot, updateDoc, deleteDoc, addDoc, collection, query, where, getDocs 
+    } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 
-    // --- Your Firebase config (from your message) ---
+    // Your Firebase config
     const firebaseConfig = {
       apiKey: "AIzaSyALyckXNK7FbzpqZGP4Lr5eVRQJVseh0fQ",
       authDomain: "chatagad-app.firebaseapp.com",
@@ -92,248 +22,130 @@
       measurementId: "G-7J5TKXQB1X"
     };
 
-    // --- App init ---
     const app = initializeApp(firebaseConfig);
-    try { getAnalytics(app); } catch (e) {}
     const auth = getAuth(app);
     const db = getFirestore(app);
 
-    // --- DOM refs ---
-    const startBtn = document.getElementById('startBtn');
-    const nextBtn = document.getElementById('nextBtn');
-    const stopBtn = document.getElementById('stopBtn');
-    const reportBtn = document.getElementById('reportBtn');
-    const reportReason = document.getElementById('reportReason');
-    const interestsInput = document.getElementById('interestsInput');
-    const messagesEl = document.getElementById('messages');
-    const msgInput = document.getElementById('msgInput');
-    const sendBtn = document.getElementById('sendBtn');
-    const roomBanner = document.getElementById('roomBanner');
-    const connDot = document.getElementById('connDot');
-    const connText = document.getElementById('connText');
-
-    // --- State ---
     let currentUser = null;
-    let roomId = null;
-    let roomUnsub = null;
-    let msgsUnsub = null;
+    let currentChatId = null;
+    let queueRef = null;
+    let chatUnsub = null;
+    let messagesUnsub = null;
 
-    // Utility helpers
-    const sleep = ms => new Promise(res => setTimeout(res, ms));
-    const randomId = () => Math.random().toString(36).slice(2, 10);
-    const nowPlusHours = (h) => new Date(Date.now() + h*3600*1000);
+    const statusEl = document.getElementById("status");
+    const messagesEl = document.getElementById("messages");
+    const messageInput = document.getElementById("messageInput");
+    const sendBtn = document.getElementById("sendBtn");
 
-    function setUIIdle() {
-      connDot.className = 'inline-block h-2.5 w-2.5 rounded-full bg-gray-300';
-      connText.textContent = 'Disconnected';
-      roomBanner.textContent = 'Waiting to start…';
-      startBtn.disabled = false; nextBtn.disabled = true; stopBtn.disabled = true;
-      reportBtn.disabled = true; reportReason.disabled = true;
-      msgInput.disabled = true; sendBtn.disabled = true; msgInput.value = '';
-      messagesEl.innerHTML = '';
-      roomId = null;
-      if (roomUnsub) { roomUnsub(); roomUnsub = null; }
-      if (msgsUnsub) { msgsUnsub(); msgsUnsub = null; }
+    function appendMessage(sender, text) {
+      const msgDiv = document.createElement("div");
+      msgDiv.className = sender === "me" ? "text-right text-blue-500" : "text-left text-green-500";
+      msgDiv.textContent = text;
+      messagesEl.appendChild(msgDiv);
+      messagesEl.scrollTop = messagesEl.scrollHeight;
     }
 
-    function setUIConnecting() {
-      connDot.className = 'inline-block h-2.5 w-2.5 rounded-full bg-yellow-400';
-      connText.textContent = 'Matching…';
-      startBtn.disabled = true; nextBtn.disabled = true; stopBtn.disabled = false;
-      reportBtn.disabled = true; reportReason.disabled = true;
-      msgInput.disabled = true; sendBtn.disabled = true;
-      roomBanner.textContent = 'Looking for a stranger with similar interests…';
-    }
+    async function joinQueue() {
+      statusEl.textContent = "Joining queue...";
+      queueRef = doc(db, "queue", currentUser.uid);
+      await setDoc(queueRef, { timestamp: Date.now() });
 
-    function setUIActive() {
-      connDot.className = 'inline-block h-2.5 w-2.5 rounded-full bg-green-500';
-      connText.textContent = 'Connected';
-      nextBtn.disabled = false; stopBtn.disabled = false;
-      reportBtn.disabled = false; reportReason.disabled = false;
-      msgInput.disabled = false; sendBtn.disabled = false; msgInput.focus();
-    }
-
-    // --- Auth (Anonymous) ---
-    onAuthStateChanged(auth, async (user) => {
-      if (!user) {
-        await signInAnonymously(auth);
-      } else {
-        currentUser = user;
-      }
-    });
-
-    // --- Matching logic (Omegle-style) ---
-    async function startMatching() {
-      setUIConnecting();
-      const myId = currentUser?.uid || randomId();
-      const tags = interestsInput.value
-        .split(',')
-        .map(s => s.trim().toLowerCase())
-        .filter(Boolean);
-
-      // 1) Try to join an existing waiting room (with overlapping tags if given)
-      // We first search by tags using array-contains-any; if no tags, we just query waiting rooms.
-      let candidate = null;
-
-      async function tryFindCandidate() {
-        // Search windows: prioritize shared tags, then any waiting room
-        if (tags.length) {
-          const q1 = query(
-            collection(db, 'rooms'),
-            where('status', '==', 'waiting'),
-            where('tags', 'array-contains-any', tags),
-            orderBy('createdAt', 'asc'),
-            limit(10)
-          );
-          const snap1 = await getDocs(q1);
-          candidate = snap1.docs.find(d => d.data().createdBy !== myId) || null;
-          if (candidate) return candidate;
-        }
-        const q2 = query(
-          collection(db, 'rooms'),
-          where('status', '==', 'waiting'),
-          orderBy('createdAt', 'asc'),
-          limit(10)
-        );
-        const snap2 = await getDocs(q2);
-        candidate = snap2.docs.find(d => d.data().createdBy !== myId) || null;
-        return candidate;
-      }
-
-      await tryFindCandidate();
-
-      if (candidate) {
-        // 2) Atomically claim the room by transaction (if still waiting)
-        const roomRef = candidate.ref;
-        try {
-          await runTransaction(db, async (tx) => {
-            const r = await tx.get(roomRef);
-            if (!r.exists()) throw new Error('Room disappeared');
-            const data = r.data();
-            if (data.status !== 'waiting') throw new Error('Already taken');
-            tx.update(roomRef, {
-              status: 'active',
-              participantB: myId,
-              matchedAt: serverTimestamp(),
-              expiresAt: nowPlusHours(24),
-            });
-          });
-          joinRoom(roomRef.id);
-          return;
-        } catch (e) {
-          // race condition: someone else grabbed it; retry by creating our own waiting room
-        }
-      }
-
-      // 3) Create a waiting room and listen until someone joins
-      const roomRef = await addDoc(collection(db, 'rooms'), {
-        createdBy: myId,
-        participantB: null,
-        status: 'waiting',
-        tags,
-        createdAt: serverTimestamp(),
-        expiresAt: nowPlusHours(24),
-      });
-
-      roomBanner.textContent = 'Waiting for a stranger… (you can Stop anytime)';
-
-      roomUnsub = onSnapshot(roomRef, (snap) => {
-        if (!snap.exists()) return;
-        const data = snap.data();
-        if (data.status === 'active') {
-          joinRoom(roomRef.id);
-        }
-      });
-
-      roomId = roomRef.id; // so Stop can cancel waiting
-    }
-
-    function listenMessages(roomRef) {
-      if (msgsUnsub) msgsUnsub();
-      const msgsRef = collection(roomRef, 'messages');
-      const q = query(msgsRef, orderBy('createdAt', 'asc'));
-      msgsUnsub = onSnapshot(q, (snap) => {
-        messagesEl.innerHTML = '';
-        snap.forEach(doc => {
-          const m = doc.data();
-          const mine = m.uid === (currentUser?.uid);
-          const row = document.createElement('div');
-          row.className = `max-w-[80%] rounded-2xl px-3 py-2 text-sm ${mine ? 'ml-auto bg-blue-600 text-white' : 'mr-auto bg-gray-200 text-gray-900'}`;
-          row.textContent = m.text;
-          messagesEl.appendChild(row);
+      // Search for another user in the queue
+      const q = query(collection(db, "queue"), where("__name__", "!=", currentUser.uid));
+      const snapshot = await getDocs(q);
+      if (!snapshot.empty) {
+        const other = snapshot.docs[0];
+        // Create a chat
+        const chatRef = doc(collection(db, "chats"));
+        await setDoc(chatRef, { 
+          user1: currentUser.uid,
+          user2: other.id
         });
-        messagesEl.scrollTop = messagesEl.scrollHeight;
-      });
+        // Remove both from queue
+        await deleteDoc(queueRef);
+        await deleteDoc(other.ref);
+        startChat(chatRef.id);
+      } else {
+        // Wait until matched
+        onSnapshot(doc(db, "queue", currentUser.uid), async (docSnap) => {
+          if (!docSnap.exists()) {
+            // Probably matched by another user
+            // Find our chat
+            const chatQ = query(
+              collection(db, "chats"), 
+              where("user1", "==", currentUser.uid)
+            );
+            const chatSnap = await getDocs(chatQ);
+            if (!chatSnap.empty) {
+              startChat(chatSnap.docs[0].id);
+            } else {
+              const chatSnap2 = await getDocs(
+                query(collection(db, "chats"), where("user2", "==", currentUser.uid))
+              );
+              if (!chatSnap2.empty) {
+                startChat(chatSnap2.docs[0].id);
+              }
+            }
+          }
+        });
+      }
     }
 
-    function joinRoom(id) {
-      roomId = id;
-      const roomRef = doc(db, 'rooms', id);
-      if (roomUnsub) roomUnsub();
-      roomUnsub = onSnapshot(roomRef, (snap) => {
-        if (!snap.exists()) return;
-        const data = snap.data();
-        if (data.status === 'ended') {
-          roomBanner.textContent = 'Stranger disconnected.';
-          setTimeout(() => setUIIdle(), 1200);
-        } else {
-          roomBanner.textContent = 'You are now chatting with a random stranger.';
-          setUIActive();
-        }
+    function startChat(chatId) {
+      currentChatId = chatId;
+      statusEl.textContent = "Connected! Say hi!";
+      // Listen for messages
+      const msgsRef = collection(db, "chats", chatId, "messages");
+      messagesUnsub = onSnapshot(msgsRef, (snap) => {
+        snap.docChanges().forEach(change => {
+          if (change.type === "added") {
+            const data = change.doc.data();
+            appendMessage(data.sender === currentUser.uid ? "me" : "other", data.text);
+          }
+        });
       });
-      listenMessages(roomRef);
     }
 
     async function sendMessage() {
-      if (!roomId) return;
-      const text = msgInput.value.trim();
+      const text = messageInput.value.trim();
       if (!text) return;
-      msgInput.value = '';
-      const msgsRef = collection(db, 'rooms', roomId, 'messages');
-      await addDoc(msgsRef, {
-        text,
-        uid: currentUser?.uid || 'anon',
-        createdAt: serverTimestamp()
-      });
+      const msgsRef = collection(db, "chats", currentChatId, "messages");
+      await addDoc(msgsRef, { sender: currentUser.uid, text, timestamp: Date.now() });
+      messageInput.value = "";
     }
 
-    async function endRoom() {
-      if (!roomId) { setUIIdle(); return; }
-      const roomRef = doc(db, 'rooms', roomId);
-      try {
-        await updateDoc(roomRef, { status: 'ended' });
-      } catch (e) {}
-      setUIIdle();
-    }
+    sendBtn.addEventListener("click", sendMessage);
+    messageInput.addEventListener("keypress", (e) => {
+      if (e.key === "Enter") sendMessage();
+    });
 
-    async function nextMatch() {
-      await endRoom();
-      await sleep(150);
-      await startMatching();
-    }
+    // Auto-remove from queue when leaving
+    window.addEventListener("beforeunload", async () => {
+      if (queueRef) {
+        try {
+          await deleteDoc(queueRef);
+        } catch {}
+      }
+    });
 
-    async function reportChat() {
-      if (!roomId) return;
-      const reason = reportReason.value.trim();
-      await addDoc(collection(db, 'rooms', roomId, 'reports'), {
-        by: currentUser?.uid || 'anon',
-        reason: reason || null,
-        createdAt: serverTimestamp()
-      });
-      reportReason.value = '';
-      alert('Thanks. Your report was submitted.');
-    }
-
-    // --- UI wiring ---
-    startBtn.addEventListener('click', startMatching);
-    nextBtn.addEventListener('click', nextMatch);
-    stopBtn.addEventListener('click', endRoom);
-    sendBtn.addEventListener('click', sendMessage);
-    msgInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') sendMessage(); });
-    reportBtn.addEventListener('click', reportChat);
-
-    // Initial
-    setUIIdle();
+    // Start
+    onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        currentUser = user;
+        joinQueue();
+      } else {
+        await signInAnonymously(auth);
+      }
+    });
   </script>
+</head>
+<body class="bg-gray-900 text-white flex flex-col items-center justify-center h-screen">
+  <h1 class="text-2xl font-bold mb-4">Omegle-Style Chat</h1>
+  <div id="status" class="mb-4">Connecting...</div>
+  <div id="messages" class="bg-gray-800 p-4 w-96 h-64 overflow-y-auto mb-4 rounded"></div>
+  <div class="flex w-96">
+    <input id="messageInput" class="flex-1 p-2 rounded-l text-black" placeholder="Type a message..." />
+    <button id="sendBtn" class="bg-blue-500 px-4 rounded-r">Send</button>
+  </div>
 </body>
 </html>
