@@ -298,6 +298,13 @@
                 const confirmationMessage = 'You are currently in a chat. Are you sure you want to leave? This will end your conversation.';
                 event.preventDefault(); 
                 event.returnValue = confirmationMessage; 
+
+                // **FIX:** Attempt to notify the other user that the chat has ended upon refresh/close.
+                // This is a "best effort" call and may not complete before the page closes.
+                // The heartbeat system is the reliable fallback.
+                const chatDocRef = doc(db, "chats", currentChatId);
+                updateDoc(chatDocRef, { disconnected: currentUser.uid });
+                
                 return confirmationMessage; 
             }
             
