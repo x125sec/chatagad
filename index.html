@@ -111,38 +111,28 @@
 
         /*
          * ===================================================================================
-         * IMPORTANT: The permission error is fixed. Please REMOVE the temporary open rules
-         * and use this SECURE version in your Firebase project to protect your app.
+         * Your Firestore security rules should look like this.
          * ===================================================================================
          *
             rules_version = '2';
             service cloud.firestore {
               match /databases/{database}/documents {
                 
-                // Rule for tracking online users
                 match /status/{userId} {
                   allow read: if request.auth != null;
                   allow write, delete: if request.auth.uid == userId;
                 }
             
-                // Rule for the matchmaking queue
                 match /queue/{userId} {
-                  // Allows any signed-in user to search the queue
                   allow read: if request.auth != null;
-                  // Allows you to add or remove yourself from the queue
                   allow create, delete: if request.auth.uid == userId;
-                  // Allows anyone to update your queue entry to signal a match
                   allow update: if request.auth != null;
                 }
             
-                // Rule for chat rooms
                 match /chats/{chatId} {
-                  // You can only read or write to a chat if you are a participant.
                   allow read, write: if request.auth.uid in resource.data.participants;
                   
-                  // Rule for messages within a chat
                   match /messages/{messageId} {
-                    // You can only read or write messages if you are a participant in the chat.
                     allow read, write: if request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants;
                   }
                 }
@@ -296,22 +286,21 @@
             
             try {
                 const queueRef = collection(db, "queue");
-                // **FIX:** Only search for users who have been active in the queue recently.
-                const recentTimeThreshold = new Date(Date.now() - 60 * 1000); // 60 seconds ago
+                const recentTimeThreshold = new Date(Date.now() - 60 * 1000);
                 
                 let q;
 
+                // **FIX:** The order of the 'where' clauses MUST match the order of the fields in the Firestore index.
+                // Your index is: `interests` (ASC), then `timestamp` (ASC).
                 if (interests.length > 0) {
-                    // Query for users with matching interests who are also recent.
                     q = query(queueRef, 
-                        where("timestamp", ">", recentTimeThreshold),
-                        where("interests", "array-contains-any", interests)
+                        where("interests", "array-contains-any", interests),
+                        where("timestamp", ">", recentTimeThreshold)
                     );
                 } else {
-                    // Query for users with no interests who are also recent.
                     q = query(queueRef, 
-                        where("timestamp", ">", recentTimeThreshold),
-                        where("interests", "==", [])
+                        where("interests", "==", []),
+                        where("timestamp", ">", recentTimeThreshold)
                     );
                 }
                 
@@ -332,17 +321,17 @@
                     const userQueueDocRef = doc(db, "queue", currentUser.uid);
                     await setDoc(userQueueDocRef, {
                         interests: interests,
-                        timestamp: serverTimestamp() // Add timestamp when entering queue
+                        timestamp: serverTimestamp()
                     });
                     console.log(`[User ${currentUser.uid.substring(0,5)}] No match found. Entering queue and waiting...`);
                     
+                    if (queueListener) queueListener(); // Stop any previous listener
                     queueListener = onSnapshot(userQueueDocRef, (docSnap) => {
                         console.log(`[User ${currentUser.uid.substring(0,5)}] My queue document was updated. Checking for match...`);
                         const data = docSnap.data();
                         if (data && data.matchedInChat) {
                             console.log(`[User ${currentUser.uid.substring(0,5)}] Match confirmed! Joining chat: ${data.matchedInChat}`);
                             startChatSession(data.matchedInChat);
-                            deleteDoc(userQueueDocRef);
                         } else {
                             console.log(`[User ${currentUser.uid.substring(0,5)}] Queue doc updated, but no match field found yet.`);
                         }
@@ -368,11 +357,8 @@
         }
         
         async function initiateChat(strangerId) {
-            console.log(`[User ${currentUser.uid.substring(0,5)}] Creating chat room for stranger: ${strangerId.substring(0,5)}`);
-            // **FIX:** Immediately remove the matched user from the queue to prevent others from matching them.
-            await deleteDoc(doc(db, "queue", strangerId));
-            console.log(`[User ${currentUser.uid.substring(0,5)}] Removed stranger ${strangerId.substring(0,5)} from queue.`);
-
+            console.log(`[User ${currentUser.uid.substring(0,5)}] Notifying stranger: ${strangerId.substring(0,5)}`);
+            
             const newChatRef = await addDoc(collection(db, "chats"), {
                 participants: [currentUser.uid, strangerId],
                 createdAt: serverTimestamp(),
@@ -380,17 +366,24 @@
             });
             console.log(`[User ${currentUser.uid.substring(0,5)}] Chat room created: ${newChatRef.id}`);
             
-            // **FIX:** Instead of updating the deleted doc, we now need a different notification system.
-            // For now, let's assume the other user will find us. This simplifies the logic and avoids errors.
-            // A more advanced solution would use a separate 'notifications' collection.
+            // **FIX:** Notify the other user by updating their queue document with the chat ID.
+            // This is the "handshake".
+            await updateDoc(doc(db, "queue", strangerId), { matchedInChat: newChatRef.id });
+            console.log(`[User ${currentUser.uid.substring(0,5)}] Notified stranger ${strangerId.substring(0,5)}.`);
             
+            // Now that the other user is notified, we can enter the chat.
             startChatSession(newChatRef.id);
         }
 
         function startChatSession(chatId) {
             console.log(`[User ${currentUser.uid.substring(0,5)}] Entering chat session: ${chatId}`);
             clearTimeout(searchTimeout);
-            if(queueListener) queueListener();
+            
+            // Clean up my own queue document now that I'm in a chat
+            if(currentUser) {
+                deleteDoc(doc(db, "queue", currentUser.uid));
+            }
+            if (queueListener) queueListener();
             queueListener = null;
 
             currentChatId = chatId;
@@ -462,24 +455,15 @@
         }
 
         function listenForMessages(chatId) {
+            if (messageListener) messageListener(); // Stop previous message listener
+
             const chatDocRef = doc(db, "chats", chatId);
-            const chatQuery = query(collection(db, "chats"), where("participants", "array-contains", currentUser.uid));
-            
-            // This listener will now find the chat room created by the other user.
-            messageListener = onSnapshot(chatQuery, (snapshot) => {
-                if (!snapshot.empty) {
-                    const chatDoc = snapshot.docs[0];
-                    if (chatDoc.id !== currentChatId) {
-                        console.log(`[User ${currentUser.uid.substring(0,5)}] Found an incoming chat connection: ${chatDoc.id}`);
-                        startChatSession(chatDoc.id);
-                    }
-                    
-                    if (chatDoc.data()?.disconnected && chatDoc.data()?.disconnected !== currentUser.uid) {
-                        endChat("Stranger has disconnected.");
-                    }
+            messageListener = onSnapshot(chatDocRef, (docSnap) => {
+                const data = docSnap.data();
+                if (data && data.disconnected && data.disconnected !== currentUser.uid) {
+                    endChat("Stranger has disconnected.");
                 }
             });
-
 
             const messagesRef = collection(db, "chats", chatId, "messages");
             const q = query(messagesRef, orderBy("timestamp", "asc"));
