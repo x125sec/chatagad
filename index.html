@@ -315,8 +315,6 @@
                 measurementId: "G-7J5TKXQB1X"
             };
 
-            const appId = 'default-app-id';
-
             // --- DOM Elements ---
             const homePage = document.getElementById('home-page');
             const chatPage = document.getElementById('chat-page');
@@ -347,38 +345,52 @@
                 try {
                     const savedInterests = localStorage.getItem('chatInterests');
                     if (savedInterests) {
-                        interests = JSON.parse(savedInterests);
+                        // Handle case where localStorage returns the string "undefined"
+                        if (savedInterests === "undefined") {
+                            interests = [];
+                            localStorage.removeItem('chatInterests');
+                        } else {
+                            interests = JSON.parse(savedInterests);
+                        }
                     } else {
                         interests = [];
                     }
                 } catch (e) {
                     console.error("Error loading interests:", e);
                     interests = [];
+                    localStorage.removeItem('chatInterests');
                 }
                 renderInterests();
             };
             
             const renderInterests = () => {
-                interestsDisplay.innerHTML = '';
-                interests.forEach(interest => {
-                    const bubble = document.createElement('div');
-                    bubble.classList.add('interest-bubble', 'inline-flex', 'items-center');
-                    bubble.innerHTML = `
-                        <span>${interest}</span>
-                        <button class="remove-interest ml-2 text-sm hover:text-slate-200" data-interest="${interest}">×</button>
-                    `;
-                    interestsDisplay.appendChild(bubble);
-                });
+                if (!interestsDisplay) {
+                    console.error("interestsDisplay element not found");
+                    return;
+                }
                 
-                // Add event listeners to remove buttons
-                document.querySelectorAll('.remove-interest').forEach(btn => {
-                    btn.addEventListener('click', (e) => {
-                        const interestToRemove = e.target.dataset.interest;
-                        interests = interests.filter(item => item !== interestToRemove);
-                        saveInterests();
-                        renderInterests();
+                interestsDisplay.innerHTML = '';
+                
+                if (interests && Array.isArray(interests)) {
+                    interests.forEach(interest => {
+                        const bubble = document.createElement('div');
+                        bubble.classList.add('interest-bubble', 'inline-flex', 'items-center');
+                        bubble.innerHTML = `
+                            <span>${interest}</span>
+                            <button class="remove-interest ml-2 text-sm hover:text-slate-200" data-interest="${interest}">×</button>
+                        `;
+                        interestsDisplay.appendChild(bubble);
                     });
-                });
+                    
+                    // Add event listeners to remove buttons
+                    document.querySelectorAll('.remove-interest').forEach(btn => {
+                        btn.addEventListener('click', (e) => {
+                            const interestToRemove = e.target.dataset.interest;
+                            const updatedInterests = interests.filter(item => item !== interestToRemove);
+                            saveInterests(updatedInterests);
+                        });
+                    });
+                }
             };
             
             const addMessage = (senderId, text) => {
@@ -440,6 +452,8 @@
             
             const updateStatus = (status) => {
                 const statusIndicator = document.querySelector('.status-indicator');
+                if (!statusIndicator) return;
+                
                 statusIndicator.classList.remove('status-connecting', 'status-connected');
                 
                 switch(status) {
@@ -591,7 +605,7 @@
                         const matchedUserInterests = docSnap.data().interests || [];
 
                         // Condition 1: Interest-Based Match
-                        if (interests.length > 0) {
+                        if (interests && interests.length > 0) {
                             const hasCommonInterest = interests.some(interest => 
                                 matchedUserInterests.includes(interest)
                             );
@@ -793,10 +807,10 @@
             interestInput.addEventListener('keydown', (e) => {
                 if (e.key === 'Enter' && interestInput.value.trim()) {
                     const newInterest = interestInput.value.trim();
+                    if (!interests) interests = [];
                     if (!interests.includes(newInterest)) {
-                        interests.push(newInterest);
-                        saveInterests();
-                        renderInterests();
+                        const updatedInterests = [...interests, newInterest];
+                        saveInterests(updatedInterests);
                         interestInput.value = '';
                     }
                 }
@@ -811,10 +825,10 @@
             });
             
             chatInput.addEventListener('input', () => {
-                if (chatInput.value.trim() && !strangerIsTyping) {
+                if (!strangerIsTyping && chatInput.value.trim()) {
                     strangerIsTyping = true;
                     handleTyping();
-                } else if (!chatInput.value.trim() && strangerIsTyping) {
+                } else if (strangerIsTyping && !chatInput.value.trim()) {
                     strangerIsTyping = false;
                     handleTyping();
                 }
