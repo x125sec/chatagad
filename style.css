@@ -1,0 +1,81 @@
+body {
+    font-family: 'Segoe UI', 'Inter', sans-serif;
+    transition: background-color 0.3s, color 0.3s;
+}
+.interest-bubble {
+    position: relative;
+    display: inline-block;
+    background-color: #E7F3FF;
+    color: #1877F2;
+    border-radius: 16px;
+    padding: 8px 28px 8px 16px;
+    margin: 4px;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1;
+}
+.interest-bubble button {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    width: 20px;
+    height: 20px;
+    background-color: #1877F2;
+    color: white;
+    border: 2px solid white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: transform 0.2s ease-in-out;
+}
+.interest-bubble button:hover {
+    transform: scale(1.1);
+}
+#messages-container {
+     scrollbar-width: thin;
+     scrollbar-color: #d1d5db #F0F2F5;
+}
+.chat-bg {
+    background-color: #F0F2F5;
+}
+/* Typing indicator styles */
+.typing-indicator span {
+    height: 8px;
+    width: 8px;
+    background-color: #9ca3af;
+    border-radius: 50%;
+    display: inline-block;
+    animation: bounce 1.4s infinite ease-in-out both;
+}
+.typing-indicator span:nth-child(1) { animation-delay: -0.32s; }
+.typing-indicator span:nth-child(2) { animation-delay: -0.16s; }
+@keyframes bounce {
+    0%, 80%, 100% { transform: scale(0); }
+    40% { transform: scale(1.0); }
+}
+
+/* Dark Mode Styles */
+.dark body { background-color: #1c1e21; color: #e4e6eb; }
+.dark #main-container { background-color: #242526; box-shadow: 0 0 15px rgba(0,0,0,0.5); }
+.dark .text-blue-600 { color: #4b9cff; }
+.dark #online-counter, .dark .header-bar { background-color: #3a3b3c; border-color: #4e4f50; }
+.dark .text-gray-800 { color: #e4e6eb; }
+.dark .text-gray-600, .dark .text-gray-500 { color: #b0b3b8; }
+.dark .text-gray-700 { color: #dadde1; }
+.dark #interest-input { background-color: #3a3b3c; border-color: #4e4f50; color: #e4e6eb; }
+.dark .interest-bubble { background-color: #2d88ff; color: white; }
+.dark .interest-bubble button { background-color: #fff; color: #2d88ff; }
+.dark .chat-bg { background-color: #18191a; }
+.dark #messages-container { scrollbar-color: #4e4f50 #18191a; }
+.dark #chat-screen .border-gray-200 { border-color: #3e4042; }
+.dark #chat-screen .bg-white { background-color: #242526; }
+.dark #message-input { background-color: #3a3b3c; border-color: #4e4f50; }
+.dark .bg-gray-200 { background-color: #3a3b3c; }
+.dark .text-gray-700 { color: #e4e6eb; }
+.dark .bg-gray-100 { background-color: #1c1e21; }
+.dark aside { background-color: #1c1e21; }
+.dark aside div { background-color: #1c1e21; }
