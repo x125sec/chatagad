@@ -53,7 +53,7 @@
     <!-- Main Application Container -->
     <div id="main-container" class="w-full max-w-4xl flex flex-col items-center min-h-screen bg-white shadow-2xl invisible">
         <!-- Home Screen -->
-        <div id="home-screen" class="w-full h-screen flex flex-col">
+        <div id="home-screen" class="w-full h-screen flex-col">
             <div class="p-4 border-b border-gray-200 shadow-sm header-bar">
                 <div class="flex justify-between items-center w-full max-w-5xl mx-auto">
                     <h1 class="text-3xl md:text-4xl font-extrabold text-blue-600">ChatAgad</h1>
@@ -78,7 +78,10 @@
                 <div class="mt-8 max-w-lg mx-auto w-full">
                     <h2 class="text-lg font-semibold mb-2 text-gray-700">Add your interests (optional)</h2>
                     <div id="interests-container" class="flex flex-wrap justify-center mb-4 min-h-[36px]"></div>
-                    <input type="text" id="interest-input" placeholder="Type an interest and press space..." class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
+                    <div class="flex items-center space-x-2">
+                        <input type="text" id="interest-input" placeholder="Type an interest..." class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
+                        <button id="add-interest-btn" class="bg-blue-600 text-white font-bold py-3 px-5 rounded-lg hover:bg-blue-700 transition-colors">Add</button>
+                    </div>
                 </div>
 
                 <div class="mt-8">
