@@ -273,14 +273,6 @@ function addInterestFromInput() {
 
 addInterestBtn.addEventListener('click', addInterestFromInput);
 
-interestInput.addEventListener('input', (e) => {
-    if (interestInput.value.endsWith(' ')) {
-        // Remove the space before adding the interest
-        interestInput.value = interestInput.value.trim();
-        addInterestFromInput();
-    }
-});
-
 interestInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') {
         e.preventDefault(); 
