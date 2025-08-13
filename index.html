@@ -50,6 +50,21 @@
         .chat-bg {
             background-color: #F0F2F5;
         }
+        /* Typing indicator styles */
+        .typing-indicator span {
+            height: 8px;
+            width: 8px;
+            background-color: #9ca3af;
+            border-radius: 50%;
+            display: inline-block;
+            animation: bounce 1.4s infinite ease-in-out both;
+        }
+        .typing-indicator span:nth-child(1) { animation-delay: -0.32s; }
+        .typing-indicator span:nth-child(2) { animation-delay: -0.16s; }
+        @keyframes bounce {
+            0%, 80%, 100% { transform: scale(0); }
+            40% { transform: scale(1.0); }
+        }
     </style>
 </head>
 <body class="bg-gray-100 text-gray-800 flex justify-center">
@@ -193,6 +208,8 @@
         let onlineCountListener = null;
         let endChatConfirmationTimeout = null;
         let isChatDisconnected = false;
+        let typingTimeout = null;
+        let isTyping = false;
 
         const mainContainer = document.getElementById('main-container');
         const homeScreen = document.getElementById('home-screen');
@@ -277,15 +294,13 @@
         }
         
         window.addEventListener('beforeunload', (event) => {
-            // If in an active chat that is NOT already disconnected, show a confirmation message.
             if (currentChatId && !isChatDisconnected) {
                 const confirmationMessage = 'You are currently in a chat. Are you sure you want to leave? This will end your conversation.';
-                event.preventDefault(); // Standard for most browsers.
-                event.returnValue = confirmationMessage; // For older browsers.
-                return confirmationMessage; // For some other browsers.
+                event.preventDefault(); 
+                event.returnValue = confirmationMessage; 
+                return confirmationMessage; 
             }
             
-            // Perform cleanup when the page is closed.
             if (currentUser) {
                 if (queueListener) {
                      deleteDoc(doc(db, "queue", currentUser.uid));
@@ -334,7 +349,6 @@
                 bubble.appendChild(removeBtn);
                 interestsContainer.appendChild(bubble);
             });
-            // Save interests to localStorage whenever they are updated
             localStorage.setItem('chatagad_interests', JSON.stringify(interests));
         }
 
@@ -439,7 +453,8 @@
                 participants: [currentUser.uid, strangerId],
                 createdAt: serverTimestamp(),
                 disconnected: null,
-                commonInterests: commonInterests
+                commonInterests: commonInterests,
+                typing: {}
             });
             console.log(`[User ${currentUser.uid.substring(0,5)}] Chat room created: ${newChatRef.id}`);
             
@@ -452,7 +467,7 @@
         function startChatSession(chatId) {
             console.log(`[User ${currentUser.uid.substring(0,5)}] Entering chat session: ${chatId}`);
             clearTimeout(searchTimeout);
-            isChatDisconnected = false; // Reset disconnect flag for new chat
+            isChatDisconnected = false; 
             
             if(currentUser) {
                 deleteDoc(doc(db, "queue", currentUser.uid));
@@ -490,7 +505,7 @@
                         showPostChatActions("You ended the chat.");
                     } catch(e) {
                         console.error("Error ending chat:", e);
-                        goHome(); // Fallback to home if error
+                        goHome(); 
                     }
                 }
             } else {
@@ -519,7 +534,7 @@
             messagesContainer.innerHTML = '';
             commonInterestsDisplay.innerHTML = '';
             currentChatId = null;
-            isChatDisconnected = false; // Reset disconnect flag
+            isChatDisconnected = false; 
             
             resetEndChatButton();
             clearTimeout(endChatConfirmationTimeout);
@@ -530,7 +545,7 @@
 
         function showPostChatActions(message) {
             addSystemMessage(message);
-            isChatDisconnected = true; // Set disconnect flag
+            isChatDisconnected = true; 
             
             if (messageListener) messageListener();
             messageListener = null;
@@ -542,13 +557,29 @@
         mainMenuBtn.addEventListener('click', goHome);
         okayNextBtn.addEventListener('click', () => {
             goHome();
-            // Use a small timeout to ensure UI resets before starting a new search
             setTimeout(() => {
                 startSearch();
             }, 100);
         });
 
-        // --- Messaging ---
+        // --- Messaging & Typing Indicator ---
+        async function updateTypingStatus(typing) {
+            if (!currentChatId || isTyping === typing) return;
+            isTyping = typing;
+            const chatDocRef = doc(db, "chats", currentChatId);
+            const typingUpdate = {};
+            typingUpdate[`typing.${currentUser.uid}`] = typing;
+            await updateDoc(chatDocRef, typingUpdate);
+        }
+        
+        messageInput.addEventListener('input', () => {
+            clearTimeout(typingTimeout);
+            updateTypingStatus(true);
+            typingTimeout = setTimeout(() => {
+                updateTypingStatus(false);
+            }, 2000); // User is considered "stopped" after 2 seconds
+        });
+
         sendBtn.addEventListener('click', sendMessage);
         messageInput.addEventListener('keyup', (e) => {
             if (e.key === 'Enter') {
@@ -559,6 +590,9 @@
         async function sendMessage() {
             const text = messageInput.value.trim();
             if (text === '' || !currentChatId) return;
+            
+            clearTimeout(typingTimeout);
+            updateTypingStatus(false);
 
             try {
                 const messagesRef = collection(db, "chats", currentChatId, "messages");
@@ -588,6 +622,14 @@
                     if (data.commonInterests) {
                         displayCommonInterests(data.commonInterests);
                     }
+                    // Handle typing indicator
+                    const participants = data.participants || [];
+                    const strangerId = participants.find(id => id !== currentUser.uid);
+                    if (strangerId && data.typing && data.typing[strangerId]) {
+                        showTypingIndicator();
+                    } else {
+                        hideTypingIndicator();
+                    }
                 }
             });
 
@@ -597,6 +639,7 @@
             onSnapshot(q, (snapshot) => {
                 snapshot.docChanges().forEach((change) => {
                     if (change.type === "added") {
+                        hideTypingIndicator(); // Hide indicator when a new message arrives
                         const msg = change.doc.data();
                         displayMessage(msg);
                     }
@@ -605,6 +648,27 @@
                 console.error("Error listening for messages:", error);
                 goHome();
             });
+        }
+
+        function showTypingIndicator() {
+            if (document.getElementById('typing-indicator')) return; // Already showing
+            const indicator = document.createElement('div');
+            indicator.id = 'typing-indicator';
+            indicator.classList.add('mb-2', 'max-w-xs', 'p-2', 'px-3', 'rounded-2xl', 'w-fit', 'bg-gray-200', 'mr-auto');
+            indicator.innerHTML = `
+                <div class="typing-indicator">
+                    <span></span><span></span><span></span>
+                </div>
+            `;
+            messagesContainer.appendChild(indicator);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        function hideTypingIndicator() {
+            const indicator = document.getElementById('typing-indicator');
+            if (indicator) {
+                indicator.remove();
+            }
         }
 
         function displayCommonInterests(common) {
