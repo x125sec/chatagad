@@ -91,14 +91,18 @@
         <div id="chat-screen" class="hidden w-full h-full flex flex-col bg-white rounded-lg shadow-xl" style="height: 80vh; max-height: 800px;">
             <div class="p-4 border-b flex justify-between items-center">
                 <h2 class="font-bold text-lg">You're chatting with a stranger</h2>
-                <button id="disconnect-btn" class="bg-red-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-600" data-action="disconnect">Disconnect</button>
             </div>
             <div id="messages-container" class="flex-1 p-4 overflow-y-auto">
                 <!-- Messages will be appended here -->
             </div>
-            <div class="p-4 border-t flex">
-                <input type="text" id="message-input" placeholder="Type your message..." class="flex-1 px-4 py-2 border rounded-l-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            <div id="chat-input-area" class="p-4 border-t flex items-center space-x-2">
+                <button id="end-chat-btn" class="bg-red-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-600 transition-colors">End Chat</button>
+                <input type="text" id="message-input" placeholder="Type your message..." class="flex-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
                 <button id="send-btn" class="bg-indigo-600 text-white font-bold py-2 px-6 rounded-r-lg hover:bg-indigo-700">Send</button>
+            </div>
+            <div id="post-chat-actions" class="hidden p-4 border-t flex justify-center items-center space-x-4">
+                 <button id="okay-next-btn" class="bg-indigo-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-indigo-700">Okay, next</button>
+                 <button id="main-menu-btn" class="bg-gray-500 text-white font-bold py-2 px-6 rounded-lg hover:bg-gray-600">Main Menu</button>
             </div>
         </div>
     </div>
@@ -161,7 +165,7 @@
         let messageListener = null;
         let currentChatId = null;
         let onlineCountListener = null;
-        let endChatTimeout = null;
+        let endChatConfirmationTimeout = null;
 
         const homeScreen = document.getElementById('home-screen');
         const loadingScreen = document.getElementById('loading-screen');
@@ -172,10 +176,14 @@
         const onlineUsersEl = document.getElementById('online-users');
         const loadingMessage = document.getElementById('loading-message');
         const cancelSearchBtn = document.getElementById('cancel-search-btn');
-        const disconnectBtn = document.getElementById('disconnect-btn');
+        const endChatBtn = document.getElementById('end-chat-btn');
         const messagesContainer = document.getElementById('messages-container');
         const messageInput = document.getElementById('message-input');
         const sendBtn = document.getElementById('send-btn');
+        const chatInputArea = document.getElementById('chat-input-area');
+        const postChatActions = document.getElementById('post-chat-actions');
+        const okayNextBtn = document.getElementById('okay-next-btn');
+        const mainMenuBtn = document.getElementById('main-menu-btn');
 
         // --- Main Application Logic ---
         async function main() {
@@ -324,7 +332,7 @@
                     });
                     console.log(`[User ${currentUser.uid.substring(0,5)}] No match found. Entering queue and waiting...`);
                     
-                    if (queueListener) queueListener(); // Stop any previous listener
+                    if (queueListener) queueListener(); 
                     queueListener = onSnapshot(userQueueDocRef, (docSnap) => {
                         console.log(`[User ${currentUser.uid.substring(0,5)}] My queue document was updated. Checking for match...`);
                         const data = docSnap.data();
@@ -398,25 +406,35 @@
             homeScreen.classList.remove('hidden');
         }
 
-        disconnectBtn.addEventListener('click', async () => {
-            // If the button's purpose is to start a new chat, go home.
-            if (disconnectBtn.dataset.action === 'new-chat') {
-                clearTimeout(endChatTimeout); // Clear the automatic redirect
-                goHome();
-                return;
-            }
-
-            // Otherwise, it's a normal disconnect.
-            if (currentChatId) {
-                try {
-                    const chatDocRef = doc(db, "chats", currentChatId);
-                    await updateDoc(chatDocRef, { disconnected: currentUser.uid });
-                } catch(e) {
-                    console.error("Error disconnecting:", e);
+        endChatBtn.addEventListener('click', async () => {
+            if (endChatBtn.dataset.state === 'confirm') {
+                if (currentChatId) {
+                    try {
+                        const chatDocRef = doc(db, "chats", currentChatId);
+                        await updateDoc(chatDocRef, { disconnected: currentUser.uid });
+                    } catch(e) {
+                        console.error("Error ending chat:", e);
+                    }
+                    goHome();
                 }
-                goHome();
+            } else {
+                endChatBtn.textContent = "Sure?";
+                endChatBtn.classList.remove('bg-red-500', 'hover:bg-red-600');
+                endChatBtn.classList.add('bg-yellow-500', 'hover:bg-yellow-600');
+                endChatBtn.dataset.state = 'confirm';
+
+                endChatConfirmationTimeout = setTimeout(() => {
+                    resetEndChatButton();
+                }, 3000);
             }
         });
+
+        function resetEndChatButton() {
+            endChatBtn.textContent = "End Chat";
+            endChatBtn.classList.remove('bg-yellow-500', 'hover:bg-yellow-600');
+            endChatBtn.classList.add('bg-red-500', 'hover:bg-red-600');
+            delete endChatBtn.dataset.state;
+        }
 
         function goHome() {
             chatScreen.classList.add('hidden');
@@ -424,33 +442,28 @@
             messagesContainer.innerHTML = '';
             currentChatId = null;
             
-            // Reset the button to its default state
-            disconnectBtn.textContent = "Disconnect";
-            disconnectBtn.className = 'bg-red-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-600';
-            disconnectBtn.dataset.action = 'disconnect';
+            resetEndChatButton();
+            clearTimeout(endChatConfirmationTimeout);
 
-            // Re-enable chat input
-            messageInput.disabled = false;
-            sendBtn.disabled = false;
+            chatInputArea.classList.remove('hidden');
+            postChatActions.classList.add('hidden');
         }
 
         function strangerDisconnected() {
-            addSystemMessage("Stranger has ended the chat. Returning to the home screen...");
+            addSystemMessage("Stranger has ended the chat.");
             
             if (messageListener) messageListener();
             messageListener = null;
             
-            messageInput.disabled = true;
-            sendBtn.disabled = true;
-
-            disconnectBtn.textContent = "New Chat";
-            disconnectBtn.className = 'bg-indigo-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-indigo-700';
-            disconnectBtn.dataset.action = 'new-chat';
-            
-            endChatTimeout = setTimeout(() => {
-                goHome();
-            }, 5000);
+            chatInputArea.classList.add('hidden');
+            postChatActions.classList.remove('hidden');
         }
+        
+        mainMenuBtn.addEventListener('click', goHome);
+        okayNextBtn.addEventListener('click', () => {
+            goHome();
+            startSearch();
+        });
 
         // --- Messaging ---
         sendBtn.addEventListener('click', sendMessage);
@@ -480,7 +493,7 @@
         }
 
         function listenForMessages(chatId) {
-            if (messageListener) messageListener(); // Stop previous message listener
+            if (messageListener) messageListener(); 
 
             const chatDocRef = doc(db, "chats", chatId);
             messageListener = onSnapshot(chatDocRef, (docSnap) => {
