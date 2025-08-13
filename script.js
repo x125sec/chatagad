@@ -56,6 +56,7 @@ let interests = [];
 let searchTimeout;
 let queueListener = null; 
 let messageListener = null;
+let strangerStatusListener = null; // New listener for stranger's online status
 let currentChatId = null;
 let onlineCountListener = null;
 let endChatConfirmationTimeout = null;
@@ -121,48 +122,35 @@ function toggleTheme() {
     applyTheme(newTheme);
 }
 
-themeToggleBtnHome.addEventListener('click', toggleTheme);
-themeToggleBtnChat.addEventListener('click', toggleTheme);
-
-const savedTheme = localStorage.getItem('theme');
-const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-if (savedTheme) {
-    applyTheme(savedTheme);
-} else if (prefersDark) {
-    applyTheme('dark');
-}
-
 // --- Startup Prompt Logic ---
-const hasAgreedToTerms = localStorage.getItem('chatagad_agreed_to_terms');
+function initializeStartupPrompt() {
+    const hasAgreedToTerms = localStorage.getItem('chatagad_agreed_to_terms');
 
-if (hasAgreedToTerms === 'true') {
-    startupPrompt.classList.add('hidden');
-    mainContainer.classList.remove('invisible');
-    leftAd.classList.remove('invisible');
-    rightAd.classList.remove('invisible');
-    main(); // Initialize the main app logic
-} else {
-    function checkCheckboxes() {
-        if (ageCheckbox.checked && termsCheckbox.checked) {
-            letsGoBtn.disabled = false;
-        } else {
-            letsGoBtn.disabled = true;
-        }
-    }
-
-    ageCheckbox.addEventListener('change', checkCheckboxes);
-    termsCheckbox.addEventListener('change', checkCheckboxes);
-
-    letsGoBtn.addEventListener('click', () => {
-        localStorage.setItem('chatagad_agreed_to_terms', 'true');
+    if (hasAgreedToTerms === 'true') {
         startupPrompt.classList.add('hidden');
         mainContainer.classList.remove('invisible');
         leftAd.classList.remove('invisible');
         rightAd.classList.remove('invisible');
         main(); // Initialize the main app logic
-    });
-}
+    } else {
+        startupPrompt.classList.remove('hidden'); // Ensure it's visible
+        function checkCheckboxes() {
+            letsGoBtn.disabled = !(ageCheckbox.checked && termsCheckbox.checked);
+        }
 
+        ageCheckbox.addEventListener('change', checkCheckboxes);
+        termsCheckbox.addEventListener('change', checkCheckboxes);
+
+        letsGoBtn.addEventListener('click', () => {
+            localStorage.setItem('chatagad_agreed_to_terms', 'true');
+            startupPrompt.classList.add('hidden');
+            mainContainer.classList.remove('invisible');
+            leftAd.classList.remove('invisible');
+            rightAd.classList.remove('invisible');
+            main(); // Initialize the main app logic
+        });
+    }
+}
 
 // --- Main Application Logic ---
 async function main() {
@@ -231,10 +219,12 @@ window.addEventListener('beforeunload', (event) => {
         const confirmationMessage = 'You are currently in a chat. Are you sure you want to leave? This will end your conversation.';
         event.preventDefault(); 
         event.returnValue = confirmationMessage; 
-
+        
+        // **FIX:** The disconnect is now handled by the heartbeat and status listener,
+        // but we can still send a "best effort" signal here for faster response.
         const chatDocRef = doc(db, "chats", currentChatId);
         updateDoc(chatDocRef, { disconnected: currentUser.uid });
-        
+
         return confirmationMessage; 
     }
     
@@ -271,16 +261,6 @@ function addInterestFromInput() {
     }
 }
 
-addInterestBtn.addEventListener('click', addInterestFromInput);
-
-interestInput.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') {
-        e.preventDefault(); 
-        addInterestFromInput();
-    }
-});
-
-
 function renderInterests() {
     interestsContainer.innerHTML = '';
     interests.forEach(interest => {
@@ -300,9 +280,6 @@ function renderInterests() {
 }
 
 // --- Chat Logic ---
-startChatBtn.addEventListener('click', startSearch);
-cancelSearchBtn.addEventListener('click', cancelSearch);
-
 async function startSearch() {
     if (!currentUser) {
         addSystemMessage("Please wait, connecting to the server...");
@@ -440,19 +417,23 @@ function cancelSearch() {
     homeScreen.classList.remove('hidden');
 }
 
+function endChat() {
+    if (currentChatId) {
+        try {
+            const chatDocRef = doc(db, "chats", currentChatId);
+            updateDoc(chatDocRef, { disconnected: currentUser.uid });
+            showPostChatActions("You ended the chat.");
+        } catch(e) {
+            console.error("Error ending chat:", e);
+            goHome(); 
+        }
+    }
+}
+
 endChatBtn.addEventListener('click', async () => {
     if (endChatBtn.dataset.state === 'confirm') {
         clearTimeout(endChatConfirmationTimeout);
-        if (currentChatId) {
-            try {
-                const chatDocRef = doc(db, "chats", currentChatId);
-                await updateDoc(chatDocRef, { disconnected: currentUser.uid });
-                showPostChatActions("You ended the chat.");
-            } catch(e) {
-                console.error("Error ending chat:", e);
-                goHome(); 
-            }
-        }
+        endChat();
     } else {
         endChatBtn.textContent = "Sure?";
         endChatBtn.classList.remove('bg-gray-200', 'text-gray-700', 'hover:bg-gray-300');
@@ -493,18 +474,12 @@ function showPostChatActions(message) {
     
     if (messageListener) messageListener();
     messageListener = null;
+    if (strangerStatusListener) strangerStatusListener();
+    strangerStatusListener = null;
     
     chatInputArea.classList.add('hidden');
     postChatActions.classList.remove('hidden');
 }
-
-mainMenuBtn.addEventListener('click', goHome);
-okayNextBtn.addEventListener('click', () => {
-    goHome();
-    setTimeout(() => {
-        startSearch();
-    }, 100);
-});
 
 // --- Messaging & Typing Indicator ---
 async function updateTypingStatus(typing) {
@@ -516,20 +491,13 @@ async function updateTypingStatus(typing) {
     await updateDoc(chatDocRef, typingUpdate);
 }
 
-messageInput.addEventListener('input', () => {
+function handleTyping() {
     clearTimeout(typingTimeout);
     updateTypingStatus(true);
     typingTimeout = setTimeout(() => {
         updateTypingStatus(false);
     }, 2000); // User is considered "stopped" after 2 seconds
-});
-
-sendBtn.addEventListener('click', sendMessage);
-messageInput.addEventListener('keyup', (e) => {
-    if (e.key === 'Enter') {
-        sendMessage();
-    }
-});
+}
 
 async function sendMessage() {
     const text = messageInput.value.trim();
@@ -555,6 +523,7 @@ async function sendMessage() {
 
 function listenForMessages(chatId) {
     if (messageListener) messageListener(); 
+    if (strangerStatusListener) strangerStatusListener();
 
     const chatDocRef = doc(db, "chats", chatId);
     messageListener = onSnapshot(chatDocRef, (docSnap) => {
@@ -566,7 +535,6 @@ function listenForMessages(chatId) {
             if (data.commonInterests) {
                 displayCommonInterests(data.commonInterests);
             }
-            // Handle typing indicator
             const participants = data.participants || [];
             const strangerId = participants.find(id => id !== currentUser.uid);
             if (strangerId && data.typing && data.typing[strangerId]) {
@@ -583,7 +551,7 @@ function listenForMessages(chatId) {
     onSnapshot(q, (snapshot) => {
         snapshot.docChanges().forEach((change) => {
             if (change.type === "added") {
-                hideTypingIndicator(); // Hide indicator when a new message arrives
+                hideTypingIndicator();
                 const msg = change.doc.data();
                 displayMessage(msg);
             }
@@ -595,7 +563,7 @@ function listenForMessages(chatId) {
 }
 
 function showTypingIndicator() {
-    if (document.getElementById('typing-indicator')) return; // Already showing
+    if (document.getElementById('typing-indicator')) return;
     const indicator = document.createElement('div');
     indicator.id = 'typing-indicator';
     indicator.classList.add('mb-2', 'max-w-xs', 'p-2', 'px-3', 'rounded-2xl', 'w-fit', 'bg-gray-200', 'mr-auto');
@@ -647,3 +615,30 @@ function addSystemMessage(text) {
     messagesContainer.appendChild(msgDiv);
     messagesContainer.scrollTop = messagesContainer.scrollHeight;
 }
+
+// --- Initialize Event Listeners on DOM Load ---
+document.addEventListener('DOMContentLoaded', () => {
+    initializeStartupPrompt();
+    themeToggleBtnHome.addEventListener('click', toggleTheme);
+    themeToggleBtnChat.addEventListener('click', toggleTheme);
+    addInterestBtn.addEventListener('click', addInterestFromInput);
+    interestInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            addInterestFromInput();
+        }
+    });
+    startChatBtn.addEventListener('click', startSearch);
+    cancelSearchBtn.addEventListener('click', cancelSearch);
+    endChatBtn.addEventListener('click', endChat);
+    mainMenuBtn.addEventListener('click', goHome);
+    okayNextBtn.addEventListener('click', () => {
+        goHome();
+        setTimeout(startSearch, 100);
+    });
+    sendBtn.addEventListener('click', sendMessage);
+    messageInput.addEventListener('keyup', (e) => {
+        if (e.key === 'Enter') sendMessage();
+    });
+    messageInput.addEventListener('input', handleTyping);
+});
