@@ -91,7 +91,7 @@
         <div id="chat-screen" class="hidden w-full h-full flex flex-col bg-white rounded-lg shadow-xl" style="height: 80vh; max-height: 800px;">
             <div class="p-4 border-b flex justify-between items-center">
                 <h2 class="font-bold text-lg">You're chatting with a stranger</h2>
-                <button id="disconnect-btn" class="bg-red-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-600">Disconnect</button>
+                <button id="disconnect-btn" class="bg-red-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-600" data-action="disconnect">Disconnect</button>
             </div>
             <div id="messages-container" class="flex-1 p-4 overflow-y-auto">
                 <!-- Messages will be appended here -->
@@ -161,6 +161,7 @@
         let messageListener = null;
         let currentChatId = null;
         let onlineCountListener = null;
+        let endChatTimeout = null;
 
         const homeScreen = document.getElementById('home-screen');
         const loadingScreen = document.getElementById('loading-screen');
@@ -290,8 +291,6 @@
                 
                 let q;
 
-                // **FIX:** The order of the 'where' clauses MUST match the order of the fields in the Firestore index.
-                // Your index is: `interests` (ASC), then `timestamp` (ASC).
                 if (interests.length > 0) {
                     q = query(queueRef, 
                         where("interests", "array-contains-any", interests),
@@ -366,12 +365,9 @@
             });
             console.log(`[User ${currentUser.uid.substring(0,5)}] Chat room created: ${newChatRef.id}`);
             
-            // **FIX:** Notify the other user by updating their queue document with the chat ID.
-            // This is the "handshake".
             await updateDoc(doc(db, "queue", strangerId), { matchedInChat: newChatRef.id });
             console.log(`[User ${currentUser.uid.substring(0,5)}] Notified stranger ${strangerId.substring(0,5)}.`);
             
-            // Now that the other user is notified, we can enter the chat.
             startChatSession(newChatRef.id);
         }
 
@@ -379,7 +375,6 @@
             console.log(`[User ${currentUser.uid.substring(0,5)}] Entering chat session: ${chatId}`);
             clearTimeout(searchTimeout);
             
-            // Clean up my own queue document now that I'm in a chat
             if(currentUser) {
                 deleteDoc(doc(db, "queue", currentUser.uid));
             }
@@ -404,6 +399,14 @@
         }
 
         disconnectBtn.addEventListener('click', async () => {
+            // If the button's purpose is to start a new chat, go home.
+            if (disconnectBtn.dataset.action === 'new-chat') {
+                clearTimeout(endChatTimeout); // Clear the automatic redirect
+                goHome();
+                return;
+            }
+
+            // Otherwise, it's a normal disconnect.
             if (currentChatId) {
                 try {
                     const chatDocRef = doc(db, "chats", currentChatId);
@@ -411,20 +414,42 @@
                 } catch(e) {
                     console.error("Error disconnecting:", e);
                 }
-                endChat("You have disconnected.");
+                goHome();
             }
         });
 
-        function endChat(systemMessage) {
-            if (systemMessage) addSystemMessage(systemMessage);
-            
-            if (messageListener) messageListener();
-            messageListener = null;
-            
+        function goHome() {
             chatScreen.classList.add('hidden');
             homeScreen.classList.remove('hidden');
             messagesContainer.innerHTML = '';
             currentChatId = null;
+            
+            // Reset the button to its default state
+            disconnectBtn.textContent = "Disconnect";
+            disconnectBtn.className = 'bg-red-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-600';
+            disconnectBtn.dataset.action = 'disconnect';
+
+            // Re-enable chat input
+            messageInput.disabled = false;
+            sendBtn.disabled = false;
+        }
+
+        function strangerDisconnected() {
+            addSystemMessage("Stranger has ended the chat. Returning to the home screen...");
+            
+            if (messageListener) messageListener();
+            messageListener = null;
+            
+            messageInput.disabled = true;
+            sendBtn.disabled = true;
+
+            disconnectBtn.textContent = "New Chat";
+            disconnectBtn.className = 'bg-indigo-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-indigo-700';
+            disconnectBtn.dataset.action = 'new-chat';
+            
+            endChatTimeout = setTimeout(() => {
+                goHome();
+            }, 5000);
         }
 
         // --- Messaging ---
@@ -461,7 +486,7 @@
             messageListener = onSnapshot(chatDocRef, (docSnap) => {
                 const data = docSnap.data();
                 if (data && data.disconnected && data.disconnected !== currentUser.uid) {
-                    endChat("Stranger has disconnected.");
+                    strangerDisconnected();
                 }
             });
 
@@ -477,7 +502,7 @@
                 });
             }, (error) => {
                 console.error("Error listening for messages:", error);
-                endChat("Error loading chat. Disconnecting.");
+                goHome();
             });
         }
 
