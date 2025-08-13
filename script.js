@@ -259,17 +259,33 @@ function loadInterests() {
     }
 }
 
-interestInput.addEventListener('keyup', (e) => {
-    if ((e.code === 'Space' || e.code === 'Enter') && interestInput.value.trim() !== '') {
-        e.preventDefault(); // Prevent form submission on Enter
-        const interest = interestInput.value.trim().toLowerCase();
+// **FIX:** Replaced 'keyup' with more reliable 'input' and 'keydown' events for mobile compatibility.
+function addInterestFromInput() {
+    const interest = interestInput.value.trim().toLowerCase();
+    if (interest) {
         if (!interests.includes(interest)) {
             interests.push(interest);
             renderInterests();
         }
         interestInput.value = '';
     }
+}
+
+interestInput.addEventListener('input', (e) => {
+    // The 'input' event is reliable for detecting spaces on mobile.
+    if (interestInput.value.endsWith(' ')) {
+        addInterestFromInput();
+    }
 });
+
+interestInput.addEventListener('keydown', (e) => {
+    // The 'keydown' event is reliable for detecting the Enter key.
+    if (e.key === 'Enter') {
+        e.preventDefault(); // Prevent form submission
+        addInterestFromInput();
+    }
+});
+
 
 function renderInterests() {
     interestsContainer.innerHTML = '';
