@@ -225,6 +225,7 @@
                 }
                 console.log(`[User ${currentUser.uid.substring(0,5)}] Signed in.`);
                 
+                loadInterests();
                 initializeOnlineFeatures();
                 
                 await updateUserHeartbeat();
@@ -294,6 +295,19 @@
         });
 
         // --- Interests Handling ---
+        function loadInterests() {
+            const savedInterests = localStorage.getItem('chatagad_interests');
+            if (savedInterests) {
+                try {
+                    interests = JSON.parse(savedInterests);
+                    renderInterests();
+                } catch (e) {
+                    console.error("Could not parse saved interests:", e);
+                    interests = [];
+                }
+            }
+        }
+
         interestInput.addEventListener('keyup', (e) => {
             if (e.code === 'Space' && interestInput.value.trim() !== '') {
                 const interest = interestInput.value.trim().toLowerCase();
@@ -320,6 +334,8 @@
                 bubble.appendChild(removeBtn);
                 interestsContainer.appendChild(bubble);
             });
+            // Save interests to localStorage whenever they are updated
+            localStorage.setItem('chatagad_interests', JSON.stringify(interests));
         }
 
         // --- Chat Logic ---
