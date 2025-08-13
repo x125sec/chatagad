@@ -56,7 +56,7 @@ let interests = [];
 let searchTimeout;
 let queueListener = null; 
 let messageListener = null;
-let strangerStatusListener = null; // New listener for stranger's online status
+let strangerStatusListener = null;
 let currentChatId = null;
 let onlineCountListener = null;
 let endChatConfirmationTimeout = null;
@@ -131,9 +131,9 @@ function initializeStartupPrompt() {
         mainContainer.classList.remove('invisible');
         leftAd.classList.remove('invisible');
         rightAd.classList.remove('invisible');
-        main(); // Initialize the main app logic
+        main(); 
     } else {
-        startupPrompt.classList.remove('hidden'); // Ensure it's visible
+        startupPrompt.classList.remove('hidden'); 
         function checkCheckboxes() {
             letsGoBtn.disabled = !(ageCheckbox.checked && termsCheckbox.checked);
         }
@@ -147,13 +147,15 @@ function initializeStartupPrompt() {
             mainContainer.classList.remove('invisible');
             leftAd.classList.remove('invisible');
             rightAd.classList.remove('invisible');
-            main(); // Initialize the main app logic
+            main(); 
         });
     }
 }
 
 // --- Main Application Logic ---
 async function main() {
+    startChatBtn.disabled = true;
+    startChatBtn.textContent = "Connecting...";
     try {
         if (auth.currentUser) {
             currentUser = auth.currentUser;
@@ -168,6 +170,9 @@ async function main() {
         
         await updateUserHeartbeat();
         setInterval(updateUserHeartbeat, 30000); 
+
+        startChatBtn.disabled = false;
+        startChatBtn.textContent = "Start Chat";
 
     } catch (error) {
         console.error("Authentication failed:", error);
@@ -220,8 +225,9 @@ window.addEventListener('beforeunload', (event) => {
         event.preventDefault(); 
         event.returnValue = confirmationMessage; 
         
-        // **FIX:** The disconnect is now handled by the heartbeat and status listener,
-        // but we can still send a "best effort" signal here for faster response.
+        // **FIX:** The disconnect is now handled by the heartbeat and status listener.
+        // This is a "best effort" signal for faster response but the primary mechanism
+        // is the heartbeat system which is more reliable.
         const chatDocRef = doc(db, "chats", currentChatId);
         updateDoc(chatDocRef, { disconnected: currentUser.uid });
 
@@ -282,7 +288,7 @@ function renderInterests() {
 // --- Chat Logic ---
 async function startSearch() {
     if (!currentUser) {
-        addSystemMessage("Please wait, connecting to the server...");
+        // This check prevents the message from appearing if the user clicks too fast.
         return;
     }
     homeScreen.classList.add('hidden');
@@ -430,22 +436,6 @@ function endChat() {
     }
 }
 
-endChatBtn.addEventListener('click', async () => {
-    if (endChatBtn.dataset.state === 'confirm') {
-        clearTimeout(endChatConfirmationTimeout);
-        endChat();
-    } else {
-        endChatBtn.textContent = "Sure?";
-        endChatBtn.classList.remove('bg-gray-200', 'text-gray-700', 'hover:bg-gray-300');
-        endChatBtn.classList.add('bg-yellow-500', 'hover:bg-yellow-600', 'text-white');
-        endChatBtn.dataset.state = 'confirm';
-
-        endChatConfirmationTimeout = setTimeout(() => {
-            resetEndChatButton();
-        }, 3000);
-    }
-});
-
 function resetEndChatButton() {
     endChatBtn.textContent = "End Chat";
     endChatBtn.classList.remove('bg-yellow-500', 'hover:bg-yellow-600', 'text-white');
@@ -496,7 +486,7 @@ function handleTyping() {
     updateTypingStatus(true);
     typingTimeout = setTimeout(() => {
         updateTypingStatus(false);
-    }, 2000); // User is considered "stopped" after 2 seconds
+    }, 2000); 
 }
 
 async function sendMessage() {
@@ -630,7 +620,21 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     startChatBtn.addEventListener('click', startSearch);
     cancelSearchBtn.addEventListener('click', cancelSearch);
-    endChatBtn.addEventListener('click', endChat);
+    endChatBtn.addEventListener('click', () => {
+        if (endChatBtn.dataset.state === 'confirm') {
+            clearTimeout(endChatConfirmationTimeout);
+            endChat();
+        } else {
+            endChatBtn.textContent = "Sure?";
+            endChatBtn.classList.remove('bg-gray-200', 'text-gray-700', 'hover:bg-gray-300');
+            endChatBtn.classList.add('bg-yellow-500', 'hover:bg-yellow-600', 'text-white');
+            endChatBtn.dataset.state = 'confirm';
+
+            endChatConfirmationTimeout = setTimeout(() => {
+                resetEndChatButton();
+            }, 3000);
+        }
+    });
     mainMenuBtn.addEventListener('click', goHome);
     okayNextBtn.addEventListener('click', () => {
         goHome();
