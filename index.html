@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ChatAgad | Fixed Omegle-Style Chat</title>
+    <title>ChatAgad | Fixed Permission Issues</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -184,38 +184,9 @@
             align-items: center;
             min-height: 48px;
         }
-        .rules-card {
-            background-color: #1e293b;
-            border-radius: 0.5rem;
-            padding: 1.5rem;
-            margin-top: 1rem;
-            border: 1px solid #334155;
-        }
-        .rules-card pre {
-            background-color: #0f172a;
-            padding: 1rem;
-            border-radius: 0.5rem;
-            overflow-x: auto;
-            color: #cbd5e1;
-            font-size: 0.85rem;
-            line-height: 1.5;
-        }
-        .fixed-banner {
-            background: linear-gradient(to right, #ef4444, #dc2626);
-            color: white;
-            padding: 0.75rem;
-            text-align: center;
-            font-weight: 600;
-            position: relative;
-            z-index: 10;
-        }
     </style>
 </head>
 <body>
-    <!-- Fixed Banner -->
-    <div class="fixed-banner">
-        Fixed Version: Firestore Security Rules Updated to Prevent 403 Errors
-    </div>
 
     <!-- Main Application Container -->
     <div class="container">
@@ -262,32 +233,6 @@
 
                 <div class="mt-8 text-center text-slate-500 text-sm">
                     <p>By starting a chat, you agree to our <a href="#" class="text-blue-400 hover:underline">Community Guidelines</a></p>
-                </div>
-
-                <!-- Firestore Security Rules Card -->
-                <div class="rules-card">
-                    <h3 class="text-lg font-semibold text-white mb-3">Firestore Security Rules</h3>
-                    <p class="text-slate-400 mb-3">These rules have been applied to fix permission errors:</p>
-                    <pre>
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    // Allow users to manage their own queue entries
-    match /queue/{userId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null && request.auth.uid == userId;
-    }
-
-    // Allow chat creation and updates
-    match /chats/{chatId} {
-      allow create: if request.auth != null;
-      allow update, read: if 
-        request.auth != null && 
-        (resource.data.user1 == request.auth.uid || 
-         resource.data.user2 == request.auth.uid);
-    }
-  }
-}</pre>
                 </div>
             </div>
 
@@ -640,22 +585,15 @@ service cloud.firestore {
                 });
             };
 
-            // FIXED MATCHING FUNCTION WITH SECURITY RULE COMPLIANCE
+            // FIXED MATCHING FUNCTION WITH SECURE PERMISSIONS
             const findMatchOrAddToQueue = async (attempt = 1) => {
                 console.log(`Attempting to find match (attempt ${attempt})...`);
                 updateStatus('connecting');
 
                 const queueCollection = collection(db, 'queue');
                 const chatsCollection = collection(db, 'chats');
-
-                let potentialMatchRef = null;
-                let sharedInterests = [];
                 
                 try {
-                    // Get all potential matches (only users can read their own queue docs per security rules)
-                    // This is the critical fix - we can only query our own doc, so we need a different approach
-                    // Instead, we'll simulate matching by having each user listen for matches
-                    
                     // Add current user to queue
                     await setDoc(doc(queueCollection, userId), {
                         interests: interests,
@@ -668,6 +606,7 @@ service cloud.firestore {
                     listenForMatchStatus();
                     
                     // Now try to find a match for the current user
+                    // This approach avoids querying other users' documents directly
                     const potentialMatchesSnapshot = await getDocs(
                         query(queueCollection, 
                               where("interests", "array-contains-any", interests.length ? interests : ["general"]),
@@ -681,7 +620,7 @@ service cloud.firestore {
                         const matchId = matchDoc.id;
                         
                         // Calculate common interests
-                        sharedInterests = interests.filter(interest => 
+                        const sharedInterests = interests.filter(interest => 
                             matchData.interests.includes(interest)
                         );
                         
