@@ -191,6 +191,22 @@
             align-items: center;
             min-height: 48px;
         }
+        .security-rules-card {
+            background-color: #1e293b;
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+            margin-top: 1rem;
+            border: 1px solid #334155;
+        }
+        .security-rules-card pre {
+            background-color: #0f172a;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            overflow-x: auto;
+            color: #cbd5e1;
+            font-size: 0.85rem;
+            line-height: 1.5;
+        }
     </style>
 </head>
 <body>
@@ -240,6 +256,31 @@
 
                 <div class="mt-8 text-center text-slate-500 text-sm">
                     <p>By starting a chat, you agree to our <a href="#" class="text-blue-400 hover:underline">Community Guidelines</a></p>
+                </div>
+
+                <!-- Firestore Security Rules Card -->
+                <div class="security-rules-card">
+                    <h3 class="text-lg font-semibold text-white mb-3">Firestore Security Rules</h3>
+                    <p class="text-slate-400 mb-3">These rules have been applied to fix the 403 Forbidden error:</p>
+                    <pre>
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Allow users to manage their own queue entries
+    match /queue/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Allow chat creation and updates
+    match /chats/{chatId} {
+      allow create: if request.auth != null;
+      allow update, read: if 
+        request.auth != null && 
+        (resource.data.user1 == request.auth.uid || 
+         resource.data.user2 == request.auth.uid);
+    }
+  }
+}</pre>
                 </div>
             </div>
 
@@ -598,8 +639,9 @@
                 });
             };
 
-            const findMatchOrAddToQueue = async () => {
-                console.log("Attempting to find match or add to queue...");
+            // --- Updated findMatchOrAddToQueue function with retry mechanism ---
+            const findMatchOrAddToQueue = async (attempt = 1) => {
+                console.log(`Attempting to find match (attempt ${attempt})...`);
                 updateStatus('connecting');
 
                 const queueCollection = collection(db, 'queue');
@@ -698,8 +740,33 @@
 
                 } catch (error) {
                     console.error("Transaction failed:", error);
-                    console.log("Retrying match search after a short delay...");
-                    setTimeout(() => findMatchOrAddToQueue(), 500);
+                    
+                    if (attempt < 3) {
+                        console.log(`Retrying transaction in ${1000 * attempt}ms...`);
+                        setTimeout(() => findMatchOrAddToQueue(attempt + 1), 1000 * attempt);
+                    } else {
+                        console.error("Transaction failed after 3 attempts");
+                        // Show error message to user
+                        chatBox.innerHTML = `
+                            <div class="flex-1 flex flex-col items-center justify-center text-center p-4">
+                                <div class="mb-6">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 text-red-500 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                    <h3 class="text-xl font-bold text-white mb-2">Connection Error</h3>
+                                    <p class="text-slate-400">Failed to find a match. Please try again later.</p>
+                                </div>
+                                <button id="retry-btn" class="py-2 px-6 btn-primary rounded-lg font-semibold">
+                                    Try Again
+                                </button>
+                            </div>
+                        `;
+                        
+                        // Add retry button functionality
+                        document.getElementById('retry-btn').addEventListener('click', () => {
+                            findMatchOrAddToQueue();
+                        });
+                    }
                 }
             };
             
