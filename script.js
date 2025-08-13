@@ -224,16 +224,10 @@ window.addEventListener('beforeunload', (event) => {
         const confirmationMessage = 'You are currently in a chat. Are you sure you want to leave? This will end your conversation.';
         event.preventDefault(); 
         event.returnValue = confirmationMessage; 
-        
-        // **FIX:** The disconnect is now handled by the heartbeat and status listener.
-        // This is a "best effort" signal for faster response but the primary mechanism
-        // is the heartbeat system which is more reliable.
-        const chatDocRef = doc(db, "chats", currentChatId);
-        updateDoc(chatDocRef, { disconnected: currentUser.uid });
-
         return confirmationMessage; 
     }
     
+    // Cleanup only happens if the user is not in an active chat
     if (currentUser) {
         if (queueListener) {
              deleteDoc(doc(db, "queue", currentUser.uid));
@@ -288,7 +282,6 @@ function renderInterests() {
 // --- Chat Logic ---
 async function startSearch() {
     if (!currentUser) {
-        // This check prevents the message from appearing if the user clicks too fast.
         return;
     }
     homeScreen.classList.add('hidden');
@@ -329,7 +322,7 @@ async function startSearch() {
                 console.log(`[User ${currentUser.uid.substring(0,5)}] Found potential match: ${strangerId.substring(0,5)}. Initiating chat.`);
                 await initiateChat(strangerId, strangerInterests);
                 matchFound = true;
-                return; // Exit after finding a match
+                return;
             }
         }
 
