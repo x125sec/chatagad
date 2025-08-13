@@ -111,41 +111,38 @@
 
         /*
          * ===================================================================================
-         * IMPORTANT: Please update your Firestore Security Rules with the following rules
-         * to fix the permission errors and secure your database.
+         * IMPORTANT: The permission error is fixed. Please REMOVE the temporary open rules
+         * and use this SECURE version in your Firebase project to protect your app.
          * ===================================================================================
          *
             rules_version = '2';
             service cloud.firestore {
               match /databases/{database}/documents {
                 
-                // Tracks online users. Anyone can read, but you can only write your own status.
+                // Rule for tracking online users
                 match /status/{userId} {
                   allow read: if request.auth != null;
                   allow write, delete: if request.auth.uid == userId;
                 }
             
-                // **FIXED RULE**: This explicitly allows querying the 'queue' collection
-                match /queue {
-                    allow list: if request.auth != null;
-                }
-
-                // Rule for accessing individual documents in the queue
+                // Rule for the matchmaking queue
                 match /queue/{userId} {
-                  // You can only create or delete your own queue entry.
+                  // Allows any signed-in user to search the queue
+                  allow read: if request.auth != null;
+                  // Allows you to add or remove yourself from the queue
                   allow create, delete: if request.auth.uid == userId;
-                  // Anyone can UPDATE an entry to signal a match. This is key for the matching logic.
-                  allow get, update: if request.auth != null; 
+                  // Allows anyone to update your queue entry to signal a match
+                  allow update: if request.auth != null;
                 }
             
-                // Chat documents.
+                // Rule for chat rooms
                 match /chats/{chatId} {
-                  // You can only read/write a chat if you are a participant.
+                  // You can only read or write to a chat if you are a participant.
                   allow read, write: if request.auth.uid in resource.data.participants;
                   
-                  // Messages subcollection within a chat.
+                  // Rule for messages within a chat
                   match /messages/{messageId} {
-                    // You can only read/write messages if you are a participant of the parent chat.
+                    // You can only read or write messages if you are a participant in the chat.
                     allow read, write: if request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants;
                   }
                 }
@@ -198,12 +195,12 @@
                     const userCredential = await signInAnonymously(auth);
                     currentUser = userCredential.user;
                 }
+                console.log(`[User ${currentUser.uid.substring(0,5)}] Signed in.`);
                 
                 initializeOnlineFeatures();
                 
-                // Set an initial heartbeat and then update it periodically
                 await updateUserHeartbeat();
-                setInterval(updateUserHeartbeat, 30000); // every 30 seconds
+                setInterval(updateUserHeartbeat, 30000); 
 
             } catch (error) {
                 console.error("Authentication failed:", error);
@@ -222,7 +219,7 @@
                     const userStatus = doc.data();
                     if (userStatus.timestamp) {
                         const lastSeen = userStatus.timestamp.toMillis();
-                        if ((now - lastSeen) < 60000) { // 60-second threshold
+                        if ((now - lastSeen) < 60000) { 
                             onlineCount++;
                         }
                     }
@@ -274,7 +271,7 @@
                 bubble.className = 'interest-bubble';
                 bubble.textContent = interest;
                 const removeBtn = document.createElement('button');
-                removeBtn.innerHTML = '&times;'; // Use HTML entity for a cleaner 'x'
+                removeBtn.innerHTML = '&times;'; 
                 removeBtn.onclick = () => {
                     interests = interests.filter(i => i !== interest);
                     renderInterests();
@@ -306,13 +303,14 @@
                 } else {
                     q = query(queueRef, where("interests", "==", []));
                 }
-
+                
                 const querySnapshot = await getDocs(q);
                 let matchFound = false;
 
                 for (const userDoc of querySnapshot.docs) {
                     if (userDoc.id !== currentUser.uid) {
                         const strangerId = userDoc.id;
+                        console.log(`[User ${currentUser.uid.substring(0,5)}] Found potential match: ${strangerId.substring(0,5)}. Initiating chat.`);
                         await initiateChat(strangerId);
                         matchFound = true;
                         return;
@@ -325,12 +323,17 @@
                         interests: interests,
                         timestamp: serverTimestamp()
                     });
+                    console.log(`[User ${currentUser.uid.substring(0,5)}] No match found. Entering queue and waiting...`);
                     
                     queueListener = onSnapshot(userQueueDocRef, (docSnap) => {
+                        console.log(`[User ${currentUser.uid.substring(0,5)}] My queue document was updated. Checking for match...`);
                         const data = docSnap.data();
                         if (data && data.matchedInChat) {
+                            console.log(`[User ${currentUser.uid.substring(0,5)}] Match confirmed! Joining chat: ${data.matchedInChat}`);
                             startChatSession(data.matchedInChat);
                             deleteDoc(userQueueDocRef);
+                        } else {
+                            console.log(`[User ${currentUser.uid.substring(0,5)}] Queue doc updated, but no match field found yet.`);
                         }
                     });
 
@@ -354,18 +357,24 @@
         }
         
         async function initiateChat(strangerId) {
+            console.log(`[User ${currentUser.uid.substring(0,5)}] Creating chat room for stranger: ${strangerId.substring(0,5)}`);
             const newChatRef = await addDoc(collection(db, "chats"), {
                 participants: [currentUser.uid, strangerId],
                 createdAt: serverTimestamp(),
                 disconnected: null,
             });
+            console.log(`[User ${currentUser.uid.substring(0,5)}] Chat room created: ${newChatRef.id}`);
+            
             await updateDoc(doc(db, "queue", strangerId), {
                 matchedInChat: newChatRef.id
             });
+            console.log(`[User ${currentUser.uid.substring(0,5)}] Notified stranger ${strangerId.substring(0,5)} by updating their queue doc.`);
+            
             startChatSession(newChatRef.id);
         }
 
         function startChatSession(chatId) {
+            console.log(`[User ${currentUser.uid.substring(0,5)}] Entering chat session: ${chatId}`);
             clearTimeout(searchTimeout);
             if(queueListener) queueListener();
             queueListener = null;
