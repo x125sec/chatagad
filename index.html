@@ -99,6 +99,7 @@
             </div>
             <div class="text-center my-2">
                 <p class="text-base font-light">You are now chatting with a stranger</p>
+                <div id="common-interests-display" class="text-sm text-gray-500 mt-1 min-h-[20px]"></div>
             </div>
             <div id="messages-container" class="flex-1 p-4 overflow-y-auto">
                 <!-- Messages will be appended here -->
@@ -199,6 +200,7 @@
         const postChatActions = document.getElementById('post-chat-actions');
         const okayNextBtn = document.getElementById('okay-next-btn');
         const mainMenuBtn = document.getElementById('main-menu-btn');
+        const commonInterestsDisplay = document.getElementById('common-interests-display');
 
         // --- Main Application Logic ---
         async function main() {
@@ -218,7 +220,6 @@
 
             } catch (error) {
                 console.error("Authentication failed:", error);
-                // **FIX:** Provide a more specific error message for network issues.
                 let errorMessage = '<div class="text-center text-red-500 p-8">Could not connect to the server. Please refresh the page.</div>';
                 if (error.code === 'auth/network-request-failed') {
                     errorMessage = '<div class="text-center text-red-500 p-8"><strong>Network Error:</strong> Could not connect to authentication services. Please check your internet connection, disable any ad-blockers, and refresh the page.</div>';
@@ -344,8 +345,9 @@
                 for (const userDoc of potentialMatches) {
                     if (userDoc.id !== currentUser.uid) {
                         const strangerId = userDoc.id;
+                        const strangerInterests = userDoc.data().interests || [];
                         console.log(`[User ${currentUser.uid.substring(0,5)}] Found potential match: ${strangerId.substring(0,5)}. Initiating chat.`);
-                        await initiateChat(strangerId);
+                        await initiateChat(strangerId, strangerInterests);
                         matchFound = true;
                         return; // Exit after finding a match
                     }
@@ -390,13 +392,17 @@
             }
         }
         
-        async function initiateChat(strangerId) {
+        async function initiateChat(strangerId, strangerInterests) {
             console.log(`[User ${currentUser.uid.substring(0,5)}] Notifying stranger: ${strangerId.substring(0,5)}`);
             
+            const myInterests = new Set(interests);
+            const commonInterests = strangerInterests.filter(interest => myInterests.has(interest));
+
             const newChatRef = await addDoc(collection(db, "chats"), {
                 participants: [currentUser.uid, strangerId],
                 createdAt: serverTimestamp(),
                 disconnected: null,
+                commonInterests: commonInterests
             });
             console.log(`[User ${currentUser.uid.substring(0,5)}] Chat room created: ${newChatRef.id}`);
             
@@ -473,6 +479,7 @@
             chatScreen.classList.add('hidden');
             homeScreen.classList.remove('hidden');
             messagesContainer.innerHTML = '';
+            commonInterestsDisplay.innerHTML = '';
             currentChatId = null;
             
             resetEndChatButton();
@@ -534,8 +541,13 @@
             const chatDocRef = doc(db, "chats", chatId);
             messageListener = onSnapshot(chatDocRef, (docSnap) => {
                 const data = docSnap.data();
-                if (data && data.disconnected && data.disconnected !== currentUser.uid) {
-                    showPostChatActions("Stranger has ended the chat.");
+                if (data) {
+                    if (data.disconnected && data.disconnected !== currentUser.uid) {
+                        showPostChatActions("Stranger has ended the chat.");
+                    }
+                    if (data.commonInterests) {
+                        displayCommonInterests(data.commonInterests);
+                    }
                 }
             });
 
@@ -553,6 +565,14 @@
                 console.error("Error listening for messages:", error);
                 goHome();
             });
+        }
+
+        function displayCommonInterests(common) {
+            if (common && common.length > 0) {
+                commonInterestsDisplay.innerHTML = `You both like: <span class="font-semibold text-pink-500">${common.join(', ')}</span>`;
+            } else {
+                commonInterestsDisplay.innerHTML = '';
+            }
         }
 
         function displayMessage(msg) {
