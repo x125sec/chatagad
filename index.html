@@ -1,142 +1,134 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ChatAgad - Talk to Strangers</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ChatAgad - Talk to Strangers</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
 </head>
 <body class="bg-gray-100 text-gray-800 flex justify-center">
 
-    <!-- Startup Prompt -->
-    <div id="startup-prompt" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 md:p-8 max-w-lg w-full">
-            <h2 class="text-2xl font-bold text-blue-600 dark:text-blue-500">Welcome to ChatAgad!</h2>
-            <div class="text-sm text-gray-600 dark:text-gray-300 mt-4 space-y-2 max-h-60 overflow-y-auto pr-2">
-                <p><strong>Discover ChatAgad</strong><br>ChatAgad is a global platform designed for making new connections. It's a space where individuals can meet, discuss shared interests, and form new friendships anonymously. We welcome everyone 18 and older to join our friendly community. Let's start a conversation!</p>
-                <p class="mt-2"><strong>Community Guidelines</strong><br>By using ChatAgad, you agree to these terms:</p>
-                <ul class="list-disc list-inside space-y-1">
-                    <li>You confirm that you are 18 years of age or older.</li>
-                    <li>You are fully responsible for your conduct and the content of your messages.</li>
-                    <li>Sending messages that are unlawful, harmful, abusive, obscene, hateful, or otherwise objectionable is strictly prohibited.</li>
-                    <li>Impersonating another person or entity is not allowed.</li>
-                    <li>We may suspend access for users who violate these guidelines.</li>
-                </ul>
-                 <p class="mt-2"><strong>Disclaimer of Liability</strong><br>ChatAgad is provided on an "as is" basis without any warranties. Your use of the service is at your own risk. To the fullest extent permitted by law, we are not liable for any damages that may arise from your use of ChatAgad.</p>
-            </div>
-            <div class="mt-6 space-y-3">
-                <label for="age-checkbox" class="flex items-center text-sm">
-                    <input type="checkbox" id="age-checkbox" class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
-                    <span class="ml-2 text-gray-700 dark:text-gray-200">I confirm that I am 18 years old or older.</span>
-                </label>
-                <label for="terms-checkbox" class="flex items-center text-sm">
-                    <input type="checkbox" id="terms-checkbox" class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
-                    <span class="ml-2 text-gray-700 dark:text-gray-200">I have read and agree to the Terms and Conditions.</span>
-                </label>
-            </div>
-            <div class="mt-6">
-                <button id="lets-go-btn" class="w-full bg-blue-600 text-white font-bold py-3 rounded-lg transition-colors shadow-lg text-lg disabled:bg-gray-400 disabled:cursor-not-allowed" disabled>
-                    Let's Go
-                </button>
-            </div>
-        </div>
-    </div>
+        <div id="startup-prompt" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 md:p-8 max-w-lg w-full">
+            <h2 class="text-2xl font-bold text-blue-600 dark:text-blue-500">Welcome to ChatAgad!</h2>
+            <div class="text-sm text-gray-600 dark:text-gray-300 mt-4 space-y-2 max-h-60 overflow-y-auto pr-2">
+                <p><strong>Discover ChatAgad</strong><br>ChatAgad is a global platform designed for making new connections. It's a space where individuals can meet, discuss shared interests, and form new friendships anonymously. We welcome everyone 18 and older to join our friendly community. Let's start a conversation!</p>
+                <p class="mt-2"><strong>Community Guidelines</strong><br>By using ChatAgad, you agree to these terms:</p>
+                <ul class="list-disc list-inside space-y-1">
+                    <li>You confirm that you are 18 years of age or older.</li>
+                    <li>You are fully responsible for your conduct and the content of your messages.</li>
+                    <li>Sending messages that are unlawful, harmful, abusive, obscene, hateful, or otherwise objectionable is strictly prohibited.</li>
+                    <li>Impersonating another person or entity is not allowed.</li>
+                    <li>We may suspend access for users who violate these guidelines.</li>
+                </ul>
+                 <p class="mt-2"><strong>Disclaimer of Liability</strong><br>ChatAgad is provided on an "as is" basis without any warranties. Your use of the service is at your own risk. To the fullest extent permitted by law, we are not liable for any damages that may arise from your use of ChatAgad.</p>
+            </div>
+            <div class="mt-6 space-y-3">
+                <label for="age-checkbox" class="flex items-center text-sm">
+                    <input type="checkbox" id="age-checkbox" class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                    <span class="ml-2 text-gray-700 dark:text-gray-200">I confirm that I am 18 years old or older.</span>
+                </label>
+                <label for="terms-checkbox" class="flex items-center text-sm">
+                    <input type="checkbox" id="terms-checkbox" class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                    <span class="ml-2 text-gray-700 dark:text-gray-200">I have read and agree to the Terms and Conditions.</span>
+                </label>
+            </div>
+            <div class="mt-6">
+                <button id="lets-go-btn" class="w-full bg-blue-600 text-white font-bold py-3 rounded-lg transition-colors shadow-lg text-lg disabled:bg-gray-400 disabled:cursor-not-allowed" disabled>
+                    Let's Go
+                </button>
+            </div>
+        </div>
+    </div>
 
 
-    <!-- Left Ad Placeholder -->
-    <aside id="left-ad" class="w-48 bg-gray-100 p-4 hidden lg:block sticky top-0 h-screen invisible">
-        <div class="w-full h-96 bg-gray-100 rounded-lg mt-4"></div>
-    </aside>
+        <aside id="left-ad" class="w-48 bg-gray-100 p-4 hidden lg:block sticky top-0 h-screen invisible">
+        <div class="w-full h-96 bg-gray-100 rounded-lg mt-4"></div>
+    </aside>
 
-    <!-- Main Application Container -->
-    <div id="main-container" class="w-full max-w-4xl flex flex-col items-center bg-white shadow-2xl invisible">
-        <!-- Home Screen -->
-        <div id="home-screen" class="w-full h-full flex flex-col">
-            <div class="p-4 border-b border-gray-200 shadow-sm header-bar">
-                <div class="flex justify-between items-center w-full max-w-5xl mx-auto">
-                    <h1 class="text-3xl md:text-4xl font-extrabold text-blue-600">ChatAgad</h1>
-                    <div class="flex items-center space-x-4">
-                        <div id="online-counter" class="flex items-center space-x-2 bg-white px-4 py-2 rounded-full shadow-md border border-gray-200">
-                            <div class="w-3 h-3 bg-green-500 rounded-full"></div>
-                            <div>
-                                <span id="online-users" class="font-bold text-gray-800">0</span>
-                                <span class="text-gray-500">online</span>
-                            </div>
-                        </div>
-                        <button id="theme-toggle-btn-home" class="p-2 rounded-full bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-200">
-                            <svg id="sun-icon-home" class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 14.95a1 1 0 010-1.414l.707-.707a1 1 0 011.414 1.414l-.707.707a1 1 0 01-1.414 0zM5 11a1 1 0 100-2H4a1 1 0 100 2h1z"/></svg>
-                            <svg id="moon-icon-home" class="w-5 h-5 hidden" fill="currentColor" viewBox="0 0 20 20"><path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path></svg>
-                        </button>
-                    </div>
-                </div>
-            </div>
-            <div class="flex-1 flex flex-col items-center justify-center text-center p-4">
-                <p class="text-lg text-gray-600 tracking-tight">Connect with strangers anonymously based on your interests.</p>
+        <div id="main-container" class="w-full max-w-4xl flex flex-col items-center bg-white shadow-2xl invisible">
+                <div id="home-screen" class="w-full h-full flex flex-col">
+            <div class="p-4 border-b border-gray-200 shadow-sm header-bar">
+                <div class="flex justify-between items-center w-full max-w-5xl mx-auto">
+                    <h1 class="text-3xl md:text-4xl font-extrabold text-blue-600">ChatAgad</h1>
+                    <div class="flex items-center space-x-4">
+                        <div id="online-counter" class="flex items-center space-x-2 bg-white px-4 py-2 rounded-full shadow-md border border-gray-200">
+                            <div class="w-3 h-3 bg-green-500 rounded-full"></div>
+                            <div>
+                                <span id="online-users" class="font-bold text-gray-800">0</span>
+                                <span class="text-gray-500">online</span>
+                            </div>
+                        </div>
+                        <button id="theme-toggle-btn-home" class="p-2 rounded-full bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-200">
+                            <svg id="sun-icon-home" class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 14.95a1 1 0 010-1.414l.707-.707a1 1 0 011.414 1.414l-.707.707a1 1 0 01-1.414 0zM5 11a1 1 0 100-2H4a1 1 0 100 2h1z"/></svg>
+                            <svg id="moon-icon-home" class="w-5 h-5 hidden" fill="currentColor" viewBox="0 0 20 20"><path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path></svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="flex-1 flex flex-col items-center justify-center text-center p-4">
+                <p class="text-lg text-gray-600 tracking-tight">Connect with strangers anonymously based on your interests.</p>
 
-                <div class="mt-8 max-w-lg mx-auto w-full">
-                    <h2 class="text-lg font-semibold mb-2 text-gray-700">Add your interests (optional)</h2>
-                    <div id="interests-container" class="flex flex-wrap justify-center mb-4 min-h-[36px]"></div>
-                    <div class="flex items-center space-x-2">
-                        <input type="text" id="interest-input" placeholder="Type an interest and press Enter" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
-                        <button id="add-interest-btn" class="bg-blue-600 text-white font-bold py-3 px-5 rounded-lg hover:bg-blue-700 transition-colors">Add</button>
-                    </div>
-                </div>
+                <div class="mt-8 max-w-lg mx-auto w-full">
+                    <h2 class="text-lg font-semibold mb-2 text-gray-700">Add your interests (optional)</h2>
+                    <div id="interests-container" class="flex flex-wrap justify-center mb-4 min-h-[36px]"></div>
+                    <div class="flex items-center space-x-2">
+                        <input type="text" id="interest-input" placeholder="Type an interest and press Enter" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
+                        <button id="add-interest-btn" class="bg-blue-600 text-white font-bold py-3 px-5 rounded-lg hover:bg-blue-700 transition-colors">Add</button>
+                    </div>
+                </div>
 
-                <div class="mt-8">
-                    <button id="start-chat-btn" class="bg-blue-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-blue-700 transition-colors shadow-lg text-lg">
-                        Start Chat
-                    </button>
-                </div>
-            </div>
-        </div>
+                <div class="mt-8">
+                    <button id="start-chat-btn" class="bg-blue-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-blue-700 transition-colors shadow-lg text-lg">
+                        Start Chat
+                    </button>
+                </div>
+            </div>
+        </div>
 
-        <!-- Loading Screen -->
-        <div id="loading-screen" class="hidden text-center w-full h-full flex flex-col items-center justify-center p-4">
-            <div class="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-blue-600 mx-auto"></div>
-            <p class="mt-4 text-lg font-semibold">Finding a stranger to chat with...</p>
-            <p id="loading-message" class="text-gray-500 mt-2"></p>
-            <button id="cancel-search-btn" class="mt-4 bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400">Cancel</button>
-        </div>
+                <div id="loading-screen" class="hidden text-center w-full h-full flex flex-col items-center justify-center p-4">
+            <div class="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-blue-600 mx-auto"></div>
+            <p class="mt-4 text-lg font-semibold">Finding a stranger to chat with...</p>
+            <p id="loading-message" class="text-gray-500 mt-2"></p>
+            <button id="cancel-search-btn" class="mt-4 bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400">Cancel</button>
+        </div>
 
-        <!-- Chat Screen -->
-        <div id="chat-screen" class="hidden w-full h-full flex flex-col">
-             <div class="p-4 border-b border-gray-200 shadow-sm header-bar">
-                 <div class="flex justify-between items-center w-full max-w-5xl mx-auto">
-                    <h1 class="text-3xl md:text-4xl font-extrabold text-blue-600">ChatAgad</h1>
-                    <button id="theme-toggle-btn-chat" class="p-2 rounded-full bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-200">
-                        <svg id="sun-icon-chat" class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 14.95a1 1 0 010-1.414l.707-.707a1 1 0 011.414 1.414l-.707.707a1 1 0 01-1.414 0zM5 11a1 1 0 100-2H4a1 1 0 100 2h1z"/></svg>
-                        <svg id="moon-icon-chat" class="w-5 h-5 hidden" fill="currentColor" viewBox="0 0 20 20"><path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path></svg>
-                    </button>
-                </div>
-            </div>
-            <div class="text-center py-2 border-b border-gray-200">
-                <p class="text-base text-gray-600">You are now chatting with a stranger</p>
-                <div id="common-interests-display" class="text-sm text-gray-500 mt-1 min-h-[20px]"></div>
-            </div>
-            <div id="messages-container" class="flex-1 p-4 overflow-y-auto chat-bg">
-                <!-- Messages will be appended here -->
-            </div>
-            <div class="p-4 bg-white border-t border-gray-200">
-                <div id="chat-input-area" class="flex items-center space-x-2">
-                    <button id="end-chat-btn" class="bg-gray-200 text-gray-700 font-bold py-2 px-4 rounded-lg hover:bg-gray-300 transition-colors">End Chat</button>
-                    <input type="text" id="message-input" placeholder="Type your message..." class="flex-1 px-4 py-2 border bg-gray-100 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    <button id="send-btn" class="bg-blue-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-700">Send</button>
-                </div>
-                <div id="post-chat-actions" class="hidden flex justify-center items-center space-x-4">
-                     <button id="okay-next-btn" class="flex-1 h-10 rounded-lg text-white font-bold bg-blue-600 hover:bg-blue-700">Okay, next</button>
-                     <button id="main-menu-btn" class="flex-1 h-10 rounded-lg text-gray-800 font-bold bg-gray-200 hover:bg-gray-300">Main Menu</button>
-                </div>
-            </div>
-        </div>
-    </div>
+                <div id="chat-screen" class="hidden w-full h-full flex flex-col">
+             <div class="p-4 border-b border-gray-200 shadow-sm header-bar">
+                 <div class="flex justify-between items-center w-full max-w-5xl mx-auto">
+                    <h1 class="text-3xl md:text-4xl font-extrabold text-blue-600">ChatAgad</h1>
+                    <button id="theme-toggle-btn-chat" class="p-2 rounded-full bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-200">
+                        <svg id="sun-icon-chat" class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 14.95a1 1 0 010-1.414l.707-.707a1 1 0 011.414 1.414l-.707.707a1 1 0 01-1.414 0zM5 11a1 1 0 100-2H4a1 1 0 100 2h1z"/></svg>
+                        <svg id="moon-icon-chat" class="w-5 h-5 hidden" fill="currentColor" viewBox="0 0 20 20"><path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path></svg>
+                    </button>
+                </div>
+            </div>
+            <div class="text-center py-2 border-b border-gray-200">
+                <p class="text-base text-gray-600">You are now chatting with a stranger</p>
+                <div id="common-interests-display" class="text-sm text-gray-500 mt-1 min-h-[20px]"></div>
+            </div>
+            <div id="messages-container" class="flex-1 p-4 overflow-y-auto chat-bg">
+                            </div>
+            <div class="p-4 bg-white border-t border-gray-200">
+                <div id="chat-input-area" class="flex items-center space-x-2 flex-wrap">
+                    <button id="end-chat-btn" class="bg-gray-200 text-gray-700 font-bold py-2 px-4 rounded-lg hover:bg-gray-300 transition-colors">End Chat</button>
+                    <input type="text" id="message-input" placeholder="Type your message..." class="flex-1 px-4 py-2 border bg-gray-100 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <button id="send-btn" class="bg-blue-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-700">Send</button>
+                </div>
+                <div id="post-chat-actions" class="hidden flex justify-center items-center space-x-4">
+                     <button id="okay-next-btn" class="flex-1 h-10 rounded-lg text-white font-bold bg-blue-600 hover:bg-blue-700">Okay, next</button>
+                     <button id="main-menu-btn" class="flex-1 h-10 rounded-lg text-gray-800 font-bold bg-gray-200 hover:bg-gray-300">Main Menu</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
-    <!-- Right Ad Placeholder -->
-    <aside id="right-ad" class="w-48 bg-gray-100 p-4 hidden lg:block sticky top-0 h-screen invisible">
-        <div class="w-full h-96 bg-gray-100 rounded-lg mt-4"></div>
-    </aside>
+        <aside id="right-ad" class="w-48 bg-gray-100 p-4 hidden lg:block sticky top-0 h-screen invisible">
+        <div class="w-full h-96 bg-gray-100 rounded-lg mt-4"></div>
+    </aside>
 
-    <script type="module" src="script.js"></script>
+    <script type="module" src="script.js"></script>
 </body>
 </html>
