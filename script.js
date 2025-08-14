@@ -52,9 +52,9 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 
 let currentUser = null;
-let interests = new Set(); // Use a Set to prevent duplicates
+let interests = [];
 let searchTimeout;
-let queueListener = null;
+let queueListener = null; 
 let messageListener = null;
 let strangerStatusListener = null;
 let currentChatId = null;
@@ -90,14 +90,11 @@ const letsGoBtn = document.getElementById('lets-go-btn');
 const leftAd = document.getElementById('left-ad');
 const rightAd = document.getElementById('right-ad');
 const addInterestBtn = document.getElementById('add-interest-btn');
-const reconnectModal = document.getElementById('reconnect-modal');
-const reconnectSearchBtn = document.getElementById('reconnect-search-btn');
-const reconnectMenuBtn = document.getElementById('reconnect-menu-btn');
-const reconnectTitle = document.getElementById('reconnect-title');
 
 // --- Mobile Viewport Height Fix ---
 function setScreenHeight() {
-    // This is the most reliable way to handle mobile keyboard viewport changes.
+    let vh = window.innerHeight * 0.01;
+    document.documentElement.style.setProperty('--vh', `${vh}px`);
     mainContainer.style.height = `${window.innerHeight}px`;
 }
 
@@ -124,10 +121,6 @@ function applyTheme(theme) {
         sunIconChat.classList.remove('hidden');
         moonIconChat.classList.add('hidden');
     }
-     const savedTheme = localStorage.getItem('theme');
-    if (savedTheme) {
-        applyTheme(savedTheme);
-    }
 }
 
 function toggleTheme() {
@@ -146,9 +139,9 @@ function initializeStartupPrompt() {
         mainContainer.classList.remove('invisible');
         leftAd.classList.remove('invisible');
         rightAd.classList.remove('invisible');
-        main();
+        main(); 
     } else {
-        startupPrompt.classList.remove('hidden');
+        startupPrompt.classList.remove('hidden'); 
         function checkCheckboxes() {
             letsGoBtn.disabled = !(ageCheckbox.checked && termsCheckbox.checked);
         }
@@ -157,14 +150,12 @@ function initializeStartupPrompt() {
         termsCheckbox.addEventListener('change', checkCheckboxes);
 
         letsGoBtn.addEventListener('click', () => {
-            if(ageCheckbox.checked && termsCheckbox.checked) {
-                localStorage.setItem('chatagad_agreed_to_terms', 'true');
-                startupPrompt.classList.add('hidden');
-                mainContainer.classList.remove('invisible');
-                leftAd.classList.remove('invisible');
-                rightAd.classList.remove('invisible');
-                main();
-            }
+            localStorage.setItem('chatagad_agreed_to_terms', 'true');
+            startupPrompt.classList.add('hidden');
+            mainContainer.classList.remove('invisible');
+            leftAd.classList.remove('invisible');
+            rightAd.classList.remove('invisible');
+            main(); 
         });
     }
 }
@@ -181,12 +172,12 @@ async function main() {
             currentUser = userCredential.user;
         }
         console.log(`[User ${currentUser.uid.substring(0,5)}] Signed in.`);
-
+        
         loadInterests();
         initializeOnlineFeatures();
-
+        
         await updateUserHeartbeat();
-        setInterval(updateUserHeartbeat, 30000);
+        setInterval(updateUserHeartbeat, 30000); 
 
         startChatBtn.disabled = false;
         startChatBtn.textContent = "Start Chat";
@@ -212,7 +203,7 @@ function initializeOnlineFeatures() {
             const userStatus = doc.data();
             if (userStatus.timestamp) {
                 const lastSeen = userStatus.timestamp.toMillis();
-                if ((now - lastSeen) < 60000) {
+                if ((now - lastSeen) < 60000) { 
                     onlineCount++;
                 }
             }
@@ -228,8 +219,8 @@ async function updateUserHeartbeat() {
     if (!currentUser) return;
     const userStatusRef = doc(db, "status", currentUser.uid);
     try {
-        await setDoc(userStatusRef, {
-            timestamp: serverTimestamp()
+        await setDoc(userStatusRef, { 
+            timestamp: serverTimestamp() 
         }, { merge: true });
     } catch (error) {
         console.error("Failed to update user heartbeat:", error);
@@ -238,16 +229,10 @@ async function updateUserHeartbeat() {
 
 window.addEventListener('beforeunload', (event) => {
     if (currentChatId && !isChatDisconnected) {
-        const confirmationMessage = 'You are currently in a chat. Are you sure you want to leave? This will end your conversation.';
-        event.preventDefault();
-        event.returnValue = confirmationMessage;
-
         const chatDocRef = doc(db, "chats", currentChatId);
         updateDoc(chatDocRef, { disconnected: currentUser.uid });
-
-        return confirmationMessage;
     }
-
+    
     if (currentUser) {
         if (queueListener) {
              deleteDoc(doc(db, "queue", currentUser.uid));
@@ -261,27 +246,23 @@ function loadInterests() {
     const savedInterests = localStorage.getItem('chatagad_interests');
     if (savedInterests) {
         try {
-            interests = new Set(JSON.parse(savedInterests));
+            interests = JSON.parse(savedInterests);
             renderInterests();
         } catch (e) {
             console.error("Could not parse saved interests:", e);
-            interests = new Set();
+            interests = [];
         }
     }
 }
 
 function addInterestFromInput() {
-    const interestText = interestInput.value.trim().toLowerCase();
-    if (interestText && !interests.has(interestText)) {
-        interests.add(interestText);
+    const interest = interestInput.value.trim().toLowerCase();
+    if (interest && !interests.includes(interest)) {
+        interests.push(interest);
         renderInterests();
-        interestInput.value = '';
-    } else if (interests.has(interestText)) {
-        // Maybe provide some feedback that the interest already exists
         interestInput.value = '';
     }
 }
-
 
 function renderInterests() {
     interestsContainer.innerHTML = '';
@@ -290,15 +271,15 @@ function renderInterests() {
         bubble.className = 'interest-bubble';
         bubble.textContent = interest;
         const removeBtn = document.createElement('button');
-        removeBtn.innerHTML = '&times;';
+        removeBtn.innerHTML = '&times;'; 
         removeBtn.onclick = () => {
-            interests.delete(interest);
+            interests = interests.filter(i => i !== interest);
             renderInterests();
         };
         bubble.appendChild(removeBtn);
         interestsContainer.appendChild(bubble);
     });
-    localStorage.setItem('chatagad_interests', JSON.stringify(Array.from(interests)));
+    localStorage.setItem('chatagad_interests', JSON.stringify(interests));
 }
 
 // --- Chat Logic ---
@@ -309,78 +290,73 @@ async function startSearch() {
     homeScreen.classList.add('hidden');
     loadingScreen.classList.remove('hidden');
     loadingMessage.textContent = 'Looking for someone to chat with...';
-
-    const interestsArray = Array.from(interests);
-
+    
     try {
         const queueRef = collection(db, "queue");
         const recentTimeThreshold = new Date(Date.now() - 60 * 1000);
+        
+        let potentialMatches = [];
 
         let q;
-        if (interestsArray.length > 0) {
-            q = query(queueRef, where("interests", "array-contains-any", interestsArray));
+        if (interests.length > 0) {
+            q = query(queueRef, where("interests", "array-contains-any", interests));
         } else {
-            q = query(queueRef,
+            q = query(queueRef, 
                 where("interests", "==", []),
                 where("timestamp", ">", recentTimeThreshold)
             );
         }
         const querySnapshot = await getDocs(q);
-
-        let potentialMatches = [];
+        
         querySnapshot.forEach(doc => {
-             const data = doc.data();
-             // Ensure user is not matching with themselves and is recent
+            const data = doc.data();
             if (doc.id !== currentUser.uid && data.timestamp && data.timestamp.toDate() > recentTimeThreshold) {
                 potentialMatches.push(doc);
             }
         });
-
-
+        
+        let matchFound = false;
         if (potentialMatches.length > 0) {
-            const strangerDoc = potentialMatches[0]; // Just take the first one for simplicity
-            const strangerId = strangerDoc.id;
-            const strangerInterests = strangerDoc.data().interests || [];
+            const userDoc = potentialMatches[0]; // Take the first available match
+            const strangerId = userDoc.id;
+            const strangerInterests = userDoc.data().interests || [];
             console.log(`[User ${currentUser.uid.substring(0,5)}] Found potential match: ${strangerId.substring(0,5)}. Initiating chat.`);
             await initiateChat(strangerId, strangerInterests);
-            return;
+            matchFound = true;
+            return; 
         }
 
-
-        // No match found, so add to queue
-        const userQueueDocRef = doc(db, "queue", currentUser.uid);
-        await setDoc(userQueueDocRef, {
-            interests: interestsArray,
-            timestamp: serverTimestamp()
-        });
-        console.log(`[User ${currentUser.uid.substring(0,5)}] No match found. Entering queue and waiting...`);
-
-        if (queueListener) queueListener();
-        queueListener = onSnapshot(userQueueDocRef, (docSnap) => {
-            console.log(`[User ${currentUser.uid.substring(0,5)}] My queue document was updated. Checking for match...`);
-            const data = docSnap.data();
-            if (data && data.matchedInChat) {
-                console.log(`[User ${currentUser.uid.substring(0,5)}] Match confirmed! Joining chat: ${data.matchedInChat}`);
-                if (queueListener) queueListener(); // Stop listening to the queue
-                queueListener = null;
-                deleteDoc(userQueueDocRef); // Clean up my queue doc
-                startChatSession(data.matchedInChat);
-            } else {
-                console.log(`[User ${currentUser.uid.substring(0,5)}] Queue doc updated, but no match field found yet.`);
-            }
-        });
-
-        searchTimeout = setTimeout(() => {
-            loadingMessage.innerHTML = "Can't find a match. Try adding more interests or <a href='#' id='remove-interests-link' class='text-blue-600'>removing them</a> for a faster search.";
-            document.getElementById('remove-interests-link')?.addEventListener('click', (e) => {
-                e.preventDefault();
-                interests.clear();
-                renderInterests();
-                cancelSearch();
-                startSearch();
+        if (!matchFound) {
+            const userQueueDocRef = doc(db, "queue", currentUser.uid);
+            await setDoc(userQueueDocRef, {
+                interests: interests,
+                timestamp: serverTimestamp()
             });
-        }, 15000);
+            console.log(`[User ${currentUser.uid.substring(0,5)}] No match found. Entering queue and waiting...`);
+            
+            if (queueListener) queueListener(); 
+            queueListener = onSnapshot(userQueueDocRef, (docSnap) => {
+                console.log(`[User ${currentUser.uid.substring(0,5)}] My queue document was updated. Checking for match...`);
+                const data = docSnap.data();
+                if (data && data.matchedInChat) {
+                    console.log(`[User ${currentUser.uid.substring(0,5)}] Match confirmed! Joining chat: ${data.matchedInChat}`);
+                    startChatSession(data.matchedInChat);
+                } else {
+                    console.log(`[User ${currentUser.uid.substring(0,5)}] Queue doc updated, but no match field found yet.`);
+                }
+            });
 
+            searchTimeout = setTimeout(() => {
+                loadingMessage.innerHTML = "Can't find a match. Try adding more interests or <a href='#' id='remove-interests-link' class='text-blue-600'>removing them</a> for a faster search.";
+                document.getElementById('remove-interests-link')?.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    interests = [];
+                    renderInterests();
+                    cancelSearch();
+                    startSearch();
+                });
+            }, 15000);
+        }
 
     } catch (error) {
         console.error("Error starting search:", error);
@@ -391,37 +367,32 @@ async function startSearch() {
 
 async function initiateChat(strangerId, strangerInterests) {
     console.log(`[User ${currentUser.uid.substring(0,5)}] Notifying stranger: ${strangerId.substring(0,5)}`);
-
-    const myInterests = Array.from(interests);
-    const commonInterests = strangerInterests.filter(interest => myInterests.includes(interest));
+    
+    const myInterests = new Set(interests);
+    const commonInterests = strangerInterests.filter(interest => myInterests.has(interest));
 
     const newChatRef = await addDoc(collection(db, "chats"), {
         participants: [currentUser.uid, strangerId],
         createdAt: serverTimestamp(),
         disconnected: null,
         commonInterests: commonInterests,
-        typing: { [currentUser.uid]: false, [strangerId]: false }
+        typing: {}
     });
     console.log(`[User ${currentUser.uid.substring(0,5)}] Chat room created: ${newChatRef.id}`);
-
-    // Notify the other user and delete their queue doc
+    
     await updateDoc(doc(db, "queue", strangerId), { matchedInChat: newChatRef.id });
     console.log(`[User ${currentUser.uid.substring(0,5)}] Notified stranger ${strangerId.substring(0,5)}.`);
-
+    
     startChatSession(newChatRef.id);
 }
 
 function startChatSession(chatId) {
     console.log(`[User ${currentUser.uid.substring(0,5)}] Entering chat session: ${chatId}`);
     clearTimeout(searchTimeout);
-    isChatDisconnected = false;
-
+    isChatDisconnected = false; 
+    
     if(currentUser) {
-        // Proactively delete my own queue document if I initiated the chat
-        const myQueueDoc = doc(db, "queue", currentUser.uid);
-        getDoc(myQueueDoc).then(docSnap => {
-            if(docSnap.exists()) deleteDoc(myQueueDoc);
-        })
+        deleteDoc(doc(db, "queue", currentUser.uid));
     }
     if (queueListener) queueListener();
     queueListener = null;
@@ -432,7 +403,6 @@ function startChatSession(chatId) {
     chatInputArea.classList.remove('hidden');
     postChatActions.classList.add('hidden');
     listenForMessages(chatId);
-    messageInput.focus();
 }
 
 function cancelSearch() {
@@ -451,33 +421,33 @@ function endChat() {
         try {
             const chatDocRef = doc(db, "chats", currentChatId);
             updateDoc(chatDocRef, { disconnected: currentUser.uid });
-            // The listener will handle the UI changes
+            showPostChatActions("You ended the chat.");
         } catch(e) {
             console.error("Error ending chat:", e);
-            goHome();
+            goHome(); 
         }
     }
 }
 
 function resetEndChatButton() {
     endChatBtn.textContent = "End Chat";
-    endChatBtn.classList.remove('bg-red-500', 'hover:bg-red-600', 'text-white');
+    endChatBtn.classList.remove('bg-yellow-500', 'hover:bg-yellow-600', 'text-white');
     endChatBtn.classList.add('bg-gray-200', 'text-gray-700', 'hover:bg-gray-300');
     delete endChatBtn.dataset.state;
 }
 
 function goHome() {
     chatScreen.classList.add('hidden');
-    reconnectModal.classList.add('hidden');
     homeScreen.classList.remove('hidden');
     messagesContainer.innerHTML = '';
     commonInterestsDisplay.innerHTML = '';
+    currentChatId = null;
+    isChatDisconnected = false; 
     
     if (messageListener) messageListener();
     messageListener = null;
-
-    currentChatId = null;
-    isChatDisconnected = false;
+    if (strangerStatusListener) strangerStatusListener();
+    strangerStatusListener = null;
 
     resetEndChatButton();
     clearTimeout(endChatConfirmationTimeout);
@@ -488,25 +458,16 @@ function goHome() {
 
 function showPostChatActions(message) {
     addSystemMessage(message);
-    isChatDisconnected = true;
+    isChatDisconnected = true; 
     
     if (messageListener) messageListener();
     messageListener = null;
+    if (strangerStatusListener) strangerStatusListener();
+    strangerStatusListener = null;
     
     chatInputArea.classList.add('hidden');
     postChatActions.classList.remove('hidden');
 }
-
-function showReconnectModal(title, message) {
-     if (messageListener) messageListener();
-     messageListener = null;
-     isChatDisconnected = true;
-
-    reconnectTitle.textContent = title;
-    reconnectModal.classList.remove('hidden');
-    chatInputArea.classList.add('hidden');
-}
-
 
 // --- Messaging & Typing Indicator ---
 async function updateTypingStatus(typing) {
@@ -519,19 +480,17 @@ async function updateTypingStatus(typing) {
 }
 
 function handleTyping() {
-    if(!isTyping) {
-       updateTypingStatus(true);
-    }
     clearTimeout(typingTimeout);
+    updateTypingStatus(true);
     typingTimeout = setTimeout(() => {
         updateTypingStatus(false);
-    }, 2000);
+    }, 2000); 
 }
 
 async function sendMessage() {
     const text = messageInput.value.trim();
-    if (text === '' || !currentChatId || isChatDisconnected) return;
-
+    if (text === '' || !currentChatId) return;
+    
     clearTimeout(typingTimeout);
     updateTypingStatus(false);
 
@@ -551,28 +510,20 @@ async function sendMessage() {
 }
 
 function listenForMessages(chatId) {
-    if (messageListener) messageListener();
-    
+    if (messageListener) messageListener(); 
+    if (strangerStatusListener) strangerStatusListener();
+
     const chatDocRef = doc(db, "chats", chatId);
     messageListener = onSnapshot(chatDocRef, (docSnap) => {
         const data = docSnap.data();
         if (data) {
-            // Handle disconnection
-            if (data.disconnected && !isChatDisconnected) {
-                const disconnectedId = data.disconnected;
-                if (disconnectedId !== currentUser.uid) {
-                    showReconnectModal("Partner Disconnected", "Your chat partner has left.");
-                } else {
-                    showReconnectModal("You Ended the Chat", "You have ended the conversation.");
-                }
+            // REVERTED: Check if stranger disconnected and show post-chat actions.
+            if (data.disconnected && data.disconnected !== currentUser.uid && !isChatDisconnected) {
+                showPostChatActions("Stranger has ended the chat.");
             }
-
-            // Handle common interests display
             if (data.commonInterests) {
                 displayCommonInterests(data.commonInterests);
             }
-
-            // Handle typing indicator
             const participants = data.participants || [];
             const strangerId = participants.find(id => id !== currentUser.uid);
             if (strangerId && data.typing && data.typing[strangerId]) {
@@ -586,7 +537,7 @@ function listenForMessages(chatId) {
     const messagesRef = collection(db, "chats", chatId, "messages");
     const q = query(messagesRef, orderBy("timestamp", "asc"));
 
-    strangerStatusListener = onSnapshot(q, (snapshot) => { // Re-using variable name, but it's for messages
+    strangerStatusListener = onSnapshot(q, (snapshot) => {
         snapshot.docChanges().forEach((change) => {
             if (change.type === "added") {
                 hideTypingIndicator();
@@ -662,10 +613,13 @@ document.addEventListener('DOMContentLoaded', () => {
     if (window.visualViewport) {
         window.visualViewport.addEventListener('resize', setScreenHeight);
     }
+
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme) {
+        applyTheme(savedTheme);
+    }
     
     initializeStartupPrompt();
-    applyTheme(localStorage.getItem('theme') || 'light');
-
     themeToggleBtnHome.addEventListener('click', toggleTheme);
     themeToggleBtnChat.addEventListener('click', toggleTheme);
     addInterestBtn.addEventListener('click', addInterestFromInput);
@@ -684,7 +638,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             endChatBtn.textContent = "Sure?";
             endChatBtn.classList.remove('bg-gray-200', 'text-gray-700', 'hover:bg-gray-300');
-            endChatBtn.classList.add('bg-red-500', 'hover:bg-red-600', 'text-white');
+            endChatBtn.classList.add('bg-yellow-500', 'hover:bg-yellow-600', 'text-white');
             endChatBtn.dataset.state = 'confirm';
 
             endChatConfirmationTimeout = setTimeout(() => {
@@ -692,13 +646,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }, 3000);
         }
     });
-
-    reconnectSearchBtn.addEventListener('click', () => {
-        goHome();
-        setTimeout(startSearch, 100);
-    });
-    reconnectMenuBtn.addEventListener('click', goHome);
-
     mainMenuBtn.addEventListener('click', goHome);
     okayNextBtn.addEventListener('click', () => {
         goHome();
