@@ -29,7 +29,7 @@ let interests = [];
 let searchTimeout;
 let queueListener = null; 
 let chatStatusListener = null;
-let newMessagesListener = null;
+let messagesListener = null;
 let currentChatId = null;
 let onlineCountListener = null;
 let endChatConfirmationTimeout = null;
@@ -386,7 +386,7 @@ function startChatSession(chatId) {
     chatInputArea.classList.remove('hidden');
     postChatActions.classList.add('hidden');
     
-    loadInitialMessages(chatId);
+    listenForMessages(chatId);
     listenForChatStatus(chatId);
 }
 
@@ -433,8 +433,8 @@ function goHome() {
     
     if (chatStatusListener) chatStatusListener();
     chatStatusListener = null;
-    if (newMessagesListener) newMessagesListener();
-    newMessagesListener = null;
+    if (messagesListener) messagesListener();
+    messagesListener = null;
 
     resetEndChatButton();
     clearTimeout(endChatConfirmationTimeout);
@@ -449,8 +449,8 @@ function showPostChatActions(message) {
     
     if (chatStatusListener) chatStatusListener();
     chatStatusListener = null;
-    if (newMessagesListener) newMessagesListener();
-    newMessagesListener = null;
+    if (messagesListener) messagesListener();
+    messagesListener = null;
     
     chatInputArea.classList.add('hidden');
     postChatActions.classList.remove('hidden');
@@ -523,7 +523,7 @@ async function loadOlderMessages() {
     
     const messages = [];
     snapshot.forEach(doc => {
-        messages.push(doc.data());
+        messages.push({id: doc.id, ...doc.data()});
     });
     
     messages.reverse().forEach(msg => {
@@ -534,70 +534,67 @@ async function loadOlderMessages() {
     loadMoreBtn.disabled = false;
 }
 
-// --- REFACTORED MESSAGE HANDLING ---
+// --- CORRECTED MESSAGE HANDLING ---
 
-async function loadInitialMessages(chatId) {
-    messagesContainer.innerHTML = '';
+function listenForMessages(chatId) {
+    if (messagesListener) messagesListener();
 
     const messagesRef = collection(db, "chats", chatId, "messages");
     const q = query(messagesRef, orderBy("timestamp", "desc"), limit(20));
-    
-    const snapshot = await getDocs(q);
 
-    if (snapshot.size === 20) {
-        allMessagesLoaded = false;
-        const loadMoreContainer = document.createElement('div');
-        loadMoreContainer.id = 'load-more-container';
-        loadMoreContainer.className = 'text-center mb-4';
-        loadMoreContainer.innerHTML = `<button id="load-more-btn" class="bg-gray-200 text-sm text-gray-700 font-bold py-1 px-4 rounded-full hover:bg-gray-300 transition-colors">Load More</button>`;
-        messagesContainer.appendChild(loadMoreContainer);
-        document.getElementById('load-more-btn').addEventListener('click', loadOlderMessages);
-    } else {
-        allMessagesLoaded = true;
-    }
+    messagesListener = onSnapshot(q, (snapshot) => {
+        // Only re-render everything if it's the initial load or a new message from the other user.
+        // This prevents the user's own new messages from causing a full re-render.
+        const isInitialLoad = !lastVisibleMessage;
+        const hasNewStrangerMessage = snapshot.docChanges().some(change => 
+            change.type === 'added' && change.doc.data().senderId !== currentUser.uid
+        );
 
-    let newestMessageTimestamp = null;
-    if (snapshot.empty) {
-        lastVisibleMessage = null;
-        newestMessageTimestamp = Timestamp.now();
-    } else {
-        lastVisibleMessage = snapshot.docs[snapshot.docs.length - 1];
-        newestMessageTimestamp = snapshot.docs[0].data().timestamp;
-    }
-    
-    const messages = [];
-    snapshot.forEach(doc => {
-        messages.push(doc.data());
-    });
-    
-    messages.reverse().forEach(msg => {
-        displayMessage(msg);
-    });
-    
-    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        if (isInitialLoad || hasNewStrangerMessage) {
+            messagesContainer.innerHTML = ''; // Clear container
 
-    listenForNewMessages(chatId, newestMessageTimestamp);
-}
+            if (snapshot.size === 20) {
+                allMessagesLoaded = false;
+                const loadMoreContainer = document.createElement('div');
+                loadMoreContainer.id = 'load-more-container';
+                loadMoreContainer.className = 'text-center mb-4';
+                loadMoreContainer.innerHTML = `<button id="load-more-btn" class="bg-gray-200 text-sm text-gray-700 font-bold py-1 px-4 rounded-full hover:bg-gray-300 transition-colors">Load More</button>`;
+                messagesContainer.appendChild(loadMoreContainer);
+                document.getElementById('load-more-btn').addEventListener('click', loadOlderMessages);
+            } else {
+                allMessagesLoaded = true;
+            }
 
-function listenForNewMessages(chatId, startTime) {
-    if (newMessagesListener) newMessagesListener();
+            if (!snapshot.empty) {
+                lastVisibleMessage = snapshot.docs[snapshot.docs.length - 1];
+            }
 
-    const messagesRef = collection(db, "chats", chatId, "messages");
-    const q = query(messagesRef, where("timestamp", ">", startTime));
+            const messages = [];
+            snapshot.forEach(doc => {
+                messages.push({id: doc.id, ...doc.data()});
+            });
+            
+            messages.reverse().forEach(msg => {
+                displayMessage(msg);
+            });
+            
+            if (isInitialLoad) {
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            }
+        }
 
-    newMessagesListener = onSnapshot(q, (snapshot) => {
-        snapshot.docChanges().forEach((change) => {
-            if (change.type === "added") {
-                const newMessageData = change.doc.data();
-                // A simple check to avoid displaying our own message twice
-                if(newMessageData.senderId !== currentUser.uid || !document.querySelector(`[data-id="${change.doc.id}"]`)) {
-                    displayMessage(newMessageData, false, change.doc.id);
+        // Always append the user's own new messages to avoid re-rendering flicker
+        snapshot.docChanges().forEach(change => {
+            if (change.type === 'added' && change.doc.data().senderId === currentUser.uid) {
+                if (!document.querySelector(`[data-id="${change.doc.id}"]`)) {
+                    displayMessage({id: change.doc.id, ...change.doc.data()});
                     messagesContainer.scrollTop = messagesContainer.scrollHeight;
                 }
             }
         });
     });
 }
+
 
 function listenForChatStatus(chatId) {
     if (chatStatusListener) chatStatusListener(); 
@@ -653,9 +650,9 @@ function displayCommonInterests(common) {
     }
 }
 
-function displayMessage(msg, prepend = false, docId = null) {
+function displayMessage(msg, prepend = false) {
     const msgDiv = document.createElement('div');
-    if(docId) msgDiv.dataset.id = docId; // Add a data-id for tracking
+    if(msg.id) msgDiv.dataset.id = msg.id;
     const p = document.createElement('p');
     p.textContent = msg.text;
 
