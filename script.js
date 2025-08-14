@@ -208,7 +208,7 @@ function initializeOnlineFeatures() {
                 }
             }
         });
-        onlineUsersEl.textContent = onlineCount;
+        // onlineUsersEl.textContent = onlineCount;
     }, (error) => {
         console.error("Error getting online users count:", error);
         onlineUsersEl.textContent = 'N/A';
@@ -430,7 +430,7 @@ function endChat() {
 }
 
 function resetEndChatButton() {
-    endChatBtn.textContent = "End Chat";
+    endChatBtn.textContent = "End";
     endChatBtn.classList.remove('bg-yellow-500', 'hover:bg-yellow-600', 'text-white');
     endChatBtn.classList.add('bg-gray-200', 'text-gray-700', 'hover:bg-gray-300');
     delete endChatBtn.dataset.state;
