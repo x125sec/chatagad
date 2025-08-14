@@ -1,7 +1,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app-check.js";
 import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getFirestore, doc, setDoc, getDoc, deleteDoc, onSnapshot, collection, query, where, getDocs, addDoc, serverTimestamp, updateDoc, orderBy, limit } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getFirestore, doc, setDoc, getDoc, deleteDoc, onSnapshot, collection, query, where, getDocs, addDoc, serverTimestamp, updateDoc, orderBy, limit, startAfter } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 const firebaseConfig = {
     apiKey: "AIzaSyALyckXNK7FbzpqZGP4Lr5eVRQJVseh0fQ",
@@ -15,7 +15,6 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 
 // --- Initialize App Check ---
-// Make sure to replace this with your actual site key
 const appCheck = initializeAppCheck(app, {
   provider: new ReCaptchaV3Provider('6LewWKYrAAAAAKMKjr_nb66-SXLpHQeUfJgOillG'), 
   isTokenAutoRefreshEnabled: true
@@ -37,6 +36,8 @@ let endChatConfirmationTimeout = null;
 let isChatDisconnected = false;
 let typingTimeout = null;
 let isTyping = false;
+let lastVisibleMessage = null; // For pagination
+let allMessagesLoaded = false; // To hide "load more" button
 
 const mainContainer = document.getElementById('main-container');
 const homeScreen = document.getElementById('home-screen');
@@ -425,6 +426,8 @@ function goHome() {
     commonInterestsDisplay.innerHTML = '';
     currentChatId = null;
     isChatDisconnected = false; 
+    lastVisibleMessage = null;
+    allMessagesLoaded = false;
     
     if (messageListener) messageListener();
     messageListener = null;
@@ -493,6 +496,38 @@ async function sendMessage() {
     }
 }
 
+async function loadOlderMessages() {
+    if (!currentChatId || allMessagesLoaded || !lastVisibleMessage) return;
+
+    const loadMoreBtn = document.getElementById('load-more-btn');
+    loadMoreBtn.textContent = 'Loading...';
+
+    const messagesRef = collection(db, "chats", currentChatId, "messages");
+    const q = query(messagesRef, orderBy("timestamp", "desc"), startAfter(lastVisibleMessage), limit(20));
+    
+    const snapshot = await getDocs(q);
+
+    if (snapshot.empty) {
+        allMessagesLoaded = true;
+        loadMoreBtn.parentElement.classList.add('hidden');
+        return;
+    }
+
+    lastVisibleMessage = snapshot.docs[snapshot.docs.length - 1];
+    
+    const messages = [];
+    snapshot.forEach(doc => {
+        messages.push(doc.data());
+    });
+    
+    messages.reverse().forEach(msg => {
+        displayMessage(msg, true); // Prepend older messages
+    });
+
+    loadMoreBtn.textContent = 'Load More';
+}
+
+
 function listenForMessages(chatId) {
     if (messageListener) messageListener(); 
     if (strangerStatusListener) strangerStatusListener();
@@ -518,20 +553,41 @@ function listenForMessages(chatId) {
     });
 
     const messagesRef = collection(db, "chats", chatId, "messages");
-    // COST SAVING CHANGE: Only listen to the last 20 messages.
     const q = query(messagesRef, orderBy("timestamp", "desc"), limit(20));
 
     strangerStatusListener = onSnapshot(q, (snapshot) => {
-        // Clear old messages before adding new ones
-        messagesContainer.innerHTML = ''; 
+        messagesContainer.innerHTML = ''; // Clear container for new batch
+        
+        // Add the "Load More" button
+        const loadMoreContainer = document.createElement('div');
+        loadMoreContainer.id = 'load-more-container';
+        loadMoreContainer.className = 'text-center mb-4';
+        if (snapshot.size < 20) {
+            allMessagesLoaded = true;
+            loadMoreContainer.classList.add('hidden');
+        }
+        loadMoreContainer.innerHTML = `<button id="load-more-btn" class="bg-gray-200 text-sm text-gray-700 font-bold py-1 px-4 rounded-full hover:bg-gray-300 transition-colors">Load More</button>`;
+        messagesContainer.appendChild(loadMoreContainer);
+        document.getElementById('load-more-btn').addEventListener('click', loadOlderMessages);
+
+        if (snapshot.empty) {
+            lastVisibleMessage = null;
+            return;
+        }
+
+        lastVisibleMessage = snapshot.docs[snapshot.docs.length - 1];
+        
         const messages = [];
         snapshot.forEach(doc => {
             messages.push(doc.data());
         });
-        // Reverse the messages to display them in the correct chronological order
+        
         messages.reverse().forEach(msg => {
             displayMessage(msg);
         });
+        
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+
     }, (error) => {
         console.error("Error listening for messages:", error);
         goHome();
@@ -567,7 +623,7 @@ function displayCommonInterests(common) {
     }
 }
 
-function displayMessage(msg) {
+function displayMessage(msg, prepend = false) {
     const msgDiv = document.createElement('div');
     const p = document.createElement('p');
     p.textContent = msg.text;
@@ -580,9 +636,15 @@ function displayMessage(msg) {
         msgDiv.classList.add('bg-gray-200', 'dark:bg-gray-700', 'text-gray-800', 'dark:text-gray-200', 'mr-auto');
     }
     msgDiv.appendChild(p);
-    messagesContainer.appendChild(msgDiv);
-    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+
+    if (prepend) {
+        const loadMoreContainer = document.getElementById('load-more-container');
+        loadMoreContainer.after(msgDiv);
+    } else {
+        messagesContainer.appendChild(msgDiv);
+    }
 }
+
 
 function addSystemMessage(text) {
     const msgDiv = document.createElement('div');
