@@ -386,7 +386,6 @@ function startChatSession(chatId) {
     chatInputArea.classList.remove('hidden');
     postChatActions.classList.add('hidden');
     
-    // Call the refactored message loading and listening functions
     loadInitialMessages(chatId);
     listenForChatStatus(chatId);
 }
@@ -479,7 +478,7 @@ async function sendMessage() {
     const rawText = messageInput.value.trim();
     if (rawText === '' || !currentChatId) return;
 
-    const text = sanitize(rawText); // Sanitize the message
+    const text = sanitize(rawText);
     
     clearTimeout(typingTimeout);
     updateTypingStatus(false);
@@ -488,7 +487,7 @@ async function sendMessage() {
         const messagesRef = collection(db, "chats", currentChatId, "messages");
         await addDoc(messagesRef, {
             senderId: currentUser.uid,
-            text: text, // Use the sanitized text
+            text: text,
             timestamp: serverTimestamp()
         });
         messageInput.value = '';
@@ -513,7 +512,7 @@ async function loadOlderMessages() {
 
     if (snapshot.docs.length < 20) {
         allMessagesLoaded = true;
-        if(loadMoreBtn) loadMoreBtn.parentElement.classList.add('hidden');
+        if(loadMoreBtn) loadMoreBtn.parentElement.remove();
     }
     
     if (snapshot.empty) {
@@ -528,7 +527,7 @@ async function loadOlderMessages() {
     });
     
     messages.reverse().forEach(msg => {
-        displayMessage(msg, true); // Prepend older messages
+        displayMessage(msg, true);
     });
 
     loadMoreBtn.textContent = 'Load More';
@@ -538,14 +537,13 @@ async function loadOlderMessages() {
 // --- REFACTORED MESSAGE HANDLING ---
 
 async function loadInitialMessages(chatId) {
-    messagesContainer.innerHTML = ''; // Clear previous chat messages
+    messagesContainer.innerHTML = '';
 
     const messagesRef = collection(db, "chats", chatId, "messages");
     const q = query(messagesRef, orderBy("timestamp", "desc"), limit(20));
     
     const snapshot = await getDocs(q);
 
-    // Add the "Load More" button if there might be more messages
     if (snapshot.size === 20) {
         allMessagesLoaded = false;
         const loadMoreContainer = document.createElement('div');
@@ -558,10 +556,13 @@ async function loadInitialMessages(chatId) {
         allMessagesLoaded = true;
     }
 
+    let newestMessageTimestamp = null;
     if (snapshot.empty) {
         lastVisibleMessage = null;
+        newestMessageTimestamp = Timestamp.now();
     } else {
         lastVisibleMessage = snapshot.docs[snapshot.docs.length - 1];
+        newestMessageTimestamp = snapshot.docs[0].data().timestamp;
     }
     
     const messages = [];
@@ -575,22 +576,24 @@ async function loadInitialMessages(chatId) {
     
     messagesContainer.scrollTop = messagesContainer.scrollHeight;
 
-    // Now, listen for NEW messages
-    listenForNewMessages(chatId);
+    listenForNewMessages(chatId, newestMessageTimestamp);
 }
 
-function listenForNewMessages(chatId) {
+function listenForNewMessages(chatId, startTime) {
     if (newMessagesListener) newMessagesListener();
 
     const messagesRef = collection(db, "chats", chatId, "messages");
-    // Create a query that starts listening from the current time.
-    const q = query(messagesRef, where("timestamp", ">", Timestamp.now()));
+    const q = query(messagesRef, where("timestamp", ">", startTime));
 
     newMessagesListener = onSnapshot(q, (snapshot) => {
         snapshot.docChanges().forEach((change) => {
             if (change.type === "added") {
-                displayMessage(change.doc.data());
-                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                const newMessageData = change.doc.data();
+                // A simple check to avoid displaying our own message twice
+                if(newMessageData.senderId !== currentUser.uid || !document.querySelector(`[data-id="${change.doc.id}"]`)) {
+                    displayMessage(newMessageData, false, change.doc.id);
+                    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                }
             }
         });
     });
@@ -650,8 +653,9 @@ function displayCommonInterests(common) {
     }
 }
 
-function displayMessage(msg, prepend = false) {
+function displayMessage(msg, prepend = false, docId = null) {
     const msgDiv = document.createElement('div');
+    if(docId) msgDiv.dataset.id = docId; // Add a data-id for tracking
     const p = document.createElement('p');
     p.textContent = msg.text;
 
@@ -672,7 +676,6 @@ function displayMessage(msg, prepend = false) {
             messagesContainer.prepend(msgDiv);
         }
     } else {
-        // Find and remove typing indicator before adding new message
         const typingIndicator = document.getElementById('typing-indicator');
         if (typingIndicator) {
             typingIndicator.remove();
