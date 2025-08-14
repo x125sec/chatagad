@@ -1,42 +1,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app-check.js";
 import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore, doc, setDoc, getDoc, deleteDoc, onSnapshot, collection, query, where, getDocs, addDoc, serverTimestamp, updateDoc, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-/*
- * ===================================================================================
- * Your Firestore security rules should look like this.
- * ===================================================================================
- *
-    rules_version = '2';
-    service cloud.firestore {
-      match /databases/{database}/documents {
-        
-        match /status/{userId} {
-          allow read: if request.auth != null;
-          allow write, delete: if request.auth.uid == userId;
-        }
-    
-        match /queue/{userId} {
-          allow read: if request.auth != null;
-          allow create, delete: if request.auth.uid == userId;
-          allow update: if request.auth.uid != userId; // Allow others to update your queue doc
-        }
-    
-        match /chats/{chatId} {
-          // Allow create if you are one of the participants
-          allow create: if request.auth.uid in request.resource.data.participants;
-          // Allow read/update if you are a participant
-          allow read, update, delete: if request.auth.uid in resource.data.participants;
-          
-          match /messages/{messageId} {
-            // Allow read/write if you are a participant of the parent chat
-            allow read, write: if get(/databases/$(database)/documents/chats/$(chatId)).data.participants.hasAny([request.auth.uid]);
-          }
-        }
-      }
-    }
- *
- */
 
 const firebaseConfig = {
     apiKey: "AIzaSyALyckXNK7FbzpqZGP4Lr5eVRQJVseh0fQ",
@@ -48,6 +13,14 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
+
+// --- Initialize App Check ---
+const appCheck = initializeAppCheck(app, {
+  provider: new ReCaptchaV3Provider('6LewWKYrAAAAAKMKjr_nb66-SXLpHQeUfJgOillG'), // Your site key is now here
+  isTokenAutoRefreshEnabled: true
+});
+
+
 const auth = getAuth(app);
 const db = getFirestore(app);
 
