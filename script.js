@@ -1,7 +1,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app-check.js";
 import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getFirestore, doc, setDoc, getDoc, deleteDoc, onSnapshot, collection, query, where, getDocs, addDoc, serverTimestamp, updateDoc, orderBy, limit, startAfter } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getFirestore, doc, setDoc, getDoc, deleteDoc, onSnapshot, collection, query, where, getDocs, addDoc, serverTimestamp, updateDoc, orderBy, limit, startAfter, Timestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 const firebaseConfig = {
     apiKey: "AIzaSyALyckXNK7FbzpqZGP4Lr5eVRQJVseh0fQ",
@@ -28,8 +28,8 @@ let currentUser = null;
 let interests = [];
 let searchTimeout;
 let queueListener = null; 
-let messageListener = null;
-let strangerStatusListener = null;
+let chatStatusListener = null;
+let newMessagesListener = null;
 let currentChatId = null;
 let onlineCountListener = null;
 let endChatConfirmationTimeout = null;
@@ -385,7 +385,10 @@ function startChatSession(chatId) {
     chatScreen.classList.remove('hidden');
     chatInputArea.classList.remove('hidden');
     postChatActions.classList.add('hidden');
-    listenForMessages(chatId);
+    
+    // Call the refactored message loading and listening functions
+    loadInitialMessages(chatId);
+    listenForChatStatus(chatId);
 }
 
 function cancelSearch() {
@@ -429,10 +432,10 @@ function goHome() {
     lastVisibleMessage = null;
     allMessagesLoaded = false;
     
-    if (messageListener) messageListener();
-    messageListener = null;
-    if (strangerStatusListener) strangerStatusListener();
-    strangerStatusListener = null;
+    if (chatStatusListener) chatStatusListener();
+    chatStatusListener = null;
+    if (newMessagesListener) newMessagesListener();
+    newMessagesListener = null;
 
     resetEndChatButton();
     clearTimeout(endChatConfirmationTimeout);
@@ -445,10 +448,10 @@ function showPostChatActions(message) {
     addSystemMessage(message);
     isChatDisconnected = true; 
     
-    if (messageListener) messageListener();
-    messageListener = null;
-    if (strangerStatusListener) strangerStatusListener();
-    strangerStatusListener = null;
+    if (chatStatusListener) chatStatusListener();
+    chatStatusListener = null;
+    if (newMessagesListener) newMessagesListener();
+    newMessagesListener = null;
     
     chatInputArea.classList.add('hidden');
     postChatActions.classList.remove('hidden');
@@ -501,15 +504,19 @@ async function loadOlderMessages() {
 
     const loadMoreBtn = document.getElementById('load-more-btn');
     loadMoreBtn.textContent = 'Loading...';
+    loadMoreBtn.disabled = true;
 
     const messagesRef = collection(db, "chats", currentChatId, "messages");
     const q = query(messagesRef, orderBy("timestamp", "desc"), startAfter(lastVisibleMessage), limit(20));
     
     const snapshot = await getDocs(q);
 
-    if (snapshot.empty) {
+    if (snapshot.docs.length < 20) {
         allMessagesLoaded = true;
-        loadMoreBtn.parentElement.classList.add('hidden');
+        if(loadMoreBtn) loadMoreBtn.parentElement.classList.add('hidden');
+    }
+    
+    if (snapshot.empty) {
         return;
     }
 
@@ -525,15 +532,75 @@ async function loadOlderMessages() {
     });
 
     loadMoreBtn.textContent = 'Load More';
+    loadMoreBtn.disabled = false;
 }
 
+// --- REFACTORED MESSAGE HANDLING ---
 
-function listenForMessages(chatId) {
-    if (messageListener) messageListener(); 
-    if (strangerStatusListener) strangerStatusListener();
+async function loadInitialMessages(chatId) {
+    messagesContainer.innerHTML = ''; // Clear previous chat messages
+
+    const messagesRef = collection(db, "chats", chatId, "messages");
+    const q = query(messagesRef, orderBy("timestamp", "desc"), limit(20));
+    
+    const snapshot = await getDocs(q);
+
+    // Add the "Load More" button if there might be more messages
+    if (snapshot.size === 20) {
+        allMessagesLoaded = false;
+        const loadMoreContainer = document.createElement('div');
+        loadMoreContainer.id = 'load-more-container';
+        loadMoreContainer.className = 'text-center mb-4';
+        loadMoreContainer.innerHTML = `<button id="load-more-btn" class="bg-gray-200 text-sm text-gray-700 font-bold py-1 px-4 rounded-full hover:bg-gray-300 transition-colors">Load More</button>`;
+        messagesContainer.appendChild(loadMoreContainer);
+        document.getElementById('load-more-btn').addEventListener('click', loadOlderMessages);
+    } else {
+        allMessagesLoaded = true;
+    }
+
+    if (snapshot.empty) {
+        lastVisibleMessage = null;
+    } else {
+        lastVisibleMessage = snapshot.docs[snapshot.docs.length - 1];
+    }
+    
+    const messages = [];
+    snapshot.forEach(doc => {
+        messages.push(doc.data());
+    });
+    
+    messages.reverse().forEach(msg => {
+        displayMessage(msg);
+    });
+    
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+
+    // Now, listen for NEW messages
+    listenForNewMessages(chatId);
+}
+
+function listenForNewMessages(chatId) {
+    if (newMessagesListener) newMessagesListener();
+
+    const messagesRef = collection(db, "chats", chatId, "messages");
+    // Create a query that starts listening from the current time.
+    const q = query(messagesRef, where("timestamp", ">", Timestamp.now()));
+
+    newMessagesListener = onSnapshot(q, (snapshot) => {
+        snapshot.docChanges().forEach((change) => {
+            if (change.type === "added") {
+                displayMessage(change.doc.data());
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            }
+        });
+    });
+}
+
+function listenForChatStatus(chatId) {
+    if (chatStatusListener) chatStatusListener(); 
 
     const chatDocRef = doc(db, "chats", chatId);
-    messageListener = onSnapshot(chatDocRef, (docSnap) => {
+    chatStatusListener = onSnapshot(chatDocRef, (docSnap) => {
         const data = docSnap.data();
         if (data) {
             if (data.disconnected && data.disconnected !== currentUser.uid && !isChatDisconnected) {
@@ -551,48 +618,8 @@ function listenForMessages(chatId) {
             }
         }
     });
-
-    const messagesRef = collection(db, "chats", chatId, "messages");
-    const q = query(messagesRef, orderBy("timestamp", "desc"), limit(20));
-
-    strangerStatusListener = onSnapshot(q, (snapshot) => {
-        messagesContainer.innerHTML = ''; // Clear container for new batch
-        
-        // Add the "Load More" button
-        const loadMoreContainer = document.createElement('div');
-        loadMoreContainer.id = 'load-more-container';
-        loadMoreContainer.className = 'text-center mb-4';
-        if (snapshot.size < 20) {
-            allMessagesLoaded = true;
-            loadMoreContainer.classList.add('hidden');
-        }
-        loadMoreContainer.innerHTML = `<button id="load-more-btn" class="bg-gray-200 text-sm text-gray-700 font-bold py-1 px-4 rounded-full hover:bg-gray-300 transition-colors">Load More</button>`;
-        messagesContainer.appendChild(loadMoreContainer);
-        document.getElementById('load-more-btn').addEventListener('click', loadOlderMessages);
-
-        if (snapshot.empty) {
-            lastVisibleMessage = null;
-            return;
-        }
-
-        lastVisibleMessage = snapshot.docs[snapshot.docs.length - 1];
-        
-        const messages = [];
-        snapshot.forEach(doc => {
-            messages.push(doc.data());
-        });
-        
-        messages.reverse().forEach(msg => {
-            displayMessage(msg);
-        });
-        
-        messagesContainer.scrollTop = messagesContainer.scrollHeight;
-
-    }, (error) => {
-        console.error("Error listening for messages:", error);
-        goHome();
-    });
 }
+
 
 function showTypingIndicator() {
     if (document.getElementById('typing-indicator')) return;
@@ -639,8 +666,17 @@ function displayMessage(msg, prepend = false) {
 
     if (prepend) {
         const loadMoreContainer = document.getElementById('load-more-container');
-        loadMoreContainer.after(msgDiv);
+        if (loadMoreContainer) {
+            loadMoreContainer.after(msgDiv);
+        } else {
+            messagesContainer.prepend(msgDiv);
+        }
     } else {
+        // Find and remove typing indicator before adding new message
+        const typingIndicator = document.getElementById('typing-indicator');
+        if (typingIndicator) {
+            typingIndicator.remove();
+        }
         messagesContainer.appendChild(msgDiv);
     }
 }
