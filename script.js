@@ -526,8 +526,9 @@ async function loadOlderMessages() {
         messages.push({id: doc.id, ...doc.data()});
     });
     
-    // BUG FIX: Reverse the array to prepend in the correct chronological order.
-    messages.reverse().forEach(msg => {
+    // BUG FIX IS HERE: We do NOT reverse the array.
+    // The query fetches newest-to-oldest, and we prepend them in that order.
+    messages.forEach(msg => {
         displayMessage(msg, true);
     });
 
@@ -535,7 +536,7 @@ async function loadOlderMessages() {
     loadMoreBtn.disabled = false;
 }
 
-// --- REVERTED AND CORRECTED MESSAGE HANDLING ---
+// --- STABLE MESSAGE HANDLING ---
 
 function listenForMessages(chatId) {
     if (messagesListener) messagesListener();
