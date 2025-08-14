@@ -526,8 +526,8 @@ async function loadOlderMessages() {
         messages.push({id: doc.id, ...doc.data()});
     });
     
-    // BUG FIX: Reverse the array to prepend in the correct chronological order.
-    messages.reverse().forEach(msg => {
+    // BUG FIX: Do NOT reverse the array here. Display them in the order they are fetched.
+    messages.forEach(msg => {
         displayMessage(msg, true);
     });
 
