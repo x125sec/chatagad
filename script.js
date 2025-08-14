@@ -29,7 +29,7 @@ let interests = [];
 let searchTimeout;
 let queueListener = null; 
 let chatStatusListener = null;
-let newMessagesListener = null;
+let messagesListener = null;
 let currentChatId = null;
 let onlineCountListener = null;
 let endChatConfirmationTimeout = null;
@@ -386,7 +386,7 @@ function startChatSession(chatId) {
     chatInputArea.classList.remove('hidden');
     postChatActions.classList.add('hidden');
     
-    loadInitialMessages(chatId);
+    listenForMessages(chatId);
     listenForChatStatus(chatId);
 }
 
@@ -433,8 +433,8 @@ function goHome() {
     
     if (chatStatusListener) chatStatusListener();
     chatStatusListener = null;
-    if (newMessagesListener) newMessagesListener();
-    newMessagesListener = null;
+    if (messagesListener) messagesListener();
+    messagesListener = null;
 
     resetEndChatButton();
     clearTimeout(endChatConfirmationTimeout);
@@ -449,8 +449,8 @@ function showPostChatActions(message) {
     
     if (chatStatusListener) chatStatusListener();
     chatStatusListener = null;
-    if (newMessagesListener) newMessagesListener();
-    newMessagesListener = null;
+    if (messagesListener) messagesListener();
+    messagesListener = null;
     
     chatInputArea.classList.add('hidden');
     postChatActions.classList.remove('hidden');
@@ -526,8 +526,8 @@ async function loadOlderMessages() {
         messages.push({id: doc.id, ...doc.data()});
     });
     
-    // BUG FIX: Do NOT reverse the array here. Display them in the order they are fetched.
-    messages.forEach(msg => {
+    // BUG FIX: Reverse the array to prepend in the correct chronological order.
+    messages.reverse().forEach(msg => {
         displayMessage(msg, true);
     });
 
@@ -537,67 +537,44 @@ async function loadOlderMessages() {
 
 // --- REVERTED AND CORRECTED MESSAGE HANDLING ---
 
-async function loadInitialMessages(chatId) {
-    messagesContainer.innerHTML = '';
+function listenForMessages(chatId) {
+    if (messagesListener) messagesListener();
 
     const messagesRef = collection(db, "chats", chatId, "messages");
     const q = query(messagesRef, orderBy("timestamp", "desc"), limit(20));
-    
-    const snapshot = await getDocs(q);
 
-    if (snapshot.size === 20) {
-        allMessagesLoaded = false;
-        const loadMoreContainer = document.createElement('div');
-        loadMoreContainer.id = 'load-more-container';
-        loadMoreContainer.className = 'text-center mb-4';
-        loadMoreContainer.innerHTML = `<button id="load-more-btn" class="bg-gray-200 text-sm text-gray-700 font-bold py-1 px-4 rounded-full hover:bg-gray-300 transition-colors">Load More</button>`;
-        messagesContainer.appendChild(loadMoreContainer);
-        document.getElementById('load-more-btn').addEventListener('click', loadOlderMessages);
-    } else {
-        allMessagesLoaded = true;
-    }
+    messagesListener = onSnapshot(q, (snapshot) => {
+        messagesContainer.innerHTML = ''; // Clear container
 
-    let newestMessageTimestamp = null;
-    if (snapshot.empty) {
-        lastVisibleMessage = null;
-        newestMessageTimestamp = Timestamp.now();
-    } else {
-        lastVisibleMessage = snapshot.docs[snapshot.docs.length - 1];
-        newestMessageTimestamp = snapshot.docs[0].data().timestamp;
-    }
-    
-    const messages = [];
-    snapshot.forEach(doc => {
-        messages.push({id: doc.id, ...doc.data()});
-    });
-    
-    messages.reverse().forEach(msg => {
-        displayMessage(msg);
-    });
-    
-    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        if (snapshot.size === 20) {
+            allMessagesLoaded = false;
+            const loadMoreContainer = document.createElement('div');
+            loadMoreContainer.id = 'load-more-container';
+            loadMoreContainer.className = 'text-center mb-4';
+            loadMoreContainer.innerHTML = `<button id="load-more-btn" class="bg-gray-200 text-sm text-gray-700 font-bold py-1 px-4 rounded-full hover:bg-gray-300 transition-colors">Load More</button>`;
+            messagesContainer.appendChild(loadMoreContainer);
+            document.getElementById('load-more-btn').addEventListener('click', loadOlderMessages);
+        } else {
+            allMessagesLoaded = true;
+        }
 
-    listenForNewMessages(chatId, newestMessageTimestamp);
-}
+        if (!snapshot.empty) {
+            lastVisibleMessage = snapshot.docs[snapshot.docs.length - 1];
+        }
 
-function listenForNewMessages(chatId, startTime) {
-    if (newMessagesListener) newMessagesListener();
-
-    const messagesRef = collection(db, "chats", chatId, "messages");
-    const q = query(messagesRef, where("timestamp", ">", startTime));
-
-    newMessagesListener = onSnapshot(q, (snapshot) => {
-        snapshot.docChanges().forEach((change) => {
-            if (change.type === "added") {
-                const newMessageData = {id: change.doc.id, ...change.doc.data()};
-                if (!document.querySelector(`[data-id="${newMessageData.id}"]`)) {
-                    displayMessage(newMessageData);
-                    messagesContainer.scrollTop = messagesContainer.scrollHeight;
-                }
-            }
+        const messages = [];
+        snapshot.forEach(doc => {
+            messages.push({id: doc.id, ...doc.data()});
         });
+        
+        messages.reverse().forEach(msg => {
+            displayMessage(msg);
+        });
+        
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
     });
 }
+
 
 function listenForChatStatus(chatId) {
     if (chatStatusListener) chatStatusListener(); 
