@@ -1,7 +1,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app-check.js";
 import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getFirestore, doc, setDoc, getDoc, deleteDoc, onSnapshot, collection, query, where, getDocs, addDoc, serverTimestamp, updateDoc, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getFirestore, doc, setDoc, getDoc, deleteDoc, onSnapshot, collection, query, where, getDocs, addDoc, serverTimestamp, updateDoc, orderBy, limit } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 const firebaseConfig = {
     apiKey: "AIzaSyALyckXNK7FbzpqZGP4Lr5eVRQJVseh0fQ",
@@ -15,8 +15,9 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 
 // --- Initialize App Check ---
+// Make sure to replace this with your actual site key
 const appCheck = initializeAppCheck(app, {
-  provider: new ReCaptchaV3Provider('6LewWKYrAAAAAKMKjr_nb66-SXLpHQeUfJgOillG'), // Your site key is now here
+  provider: new ReCaptchaV3Provider('6LewWKYrAAAAAKMKjr_nb66-SXLpHQeUfJgOillG'), 
   isTokenAutoRefreshEnabled: true
 });
 
@@ -517,15 +518,19 @@ function listenForMessages(chatId) {
     });
 
     const messagesRef = collection(db, "chats", chatId, "messages");
-    const q = query(messagesRef, orderBy("timestamp", "asc"));
+    // COST SAVING CHANGE: Only listen to the last 20 messages.
+    const q = query(messagesRef, orderBy("timestamp", "desc"), limit(20));
 
     strangerStatusListener = onSnapshot(q, (snapshot) => {
-        snapshot.docChanges().forEach((change) => {
-            if (change.type === "added") {
-                hideTypingIndicator();
-                const msg = change.doc.data();
-                displayMessage(msg);
-            }
+        // Clear old messages before adding new ones
+        messagesContainer.innerHTML = ''; 
+        const messages = [];
+        snapshot.forEach(doc => {
+            messages.push(doc.data());
+        });
+        // Reverse the messages to display them in the correct chronological order
+        messages.reverse().forEach(msg => {
+            displayMessage(msg);
         });
     }, (error) => {
         console.error("Error listening for messages:", error);
