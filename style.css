@@ -2,6 +2,7 @@ html, body {
     height: 100%;
     margin: 0;
     padding: 0;
+    overflow-x: hidden; /* Prevents horizontal scroll/space */
 }
 body {
     font-family: 'Segoe UI', 'Inter', sans-serif;
@@ -84,8 +85,11 @@ body {
 .dark #chat-screen .bg-white { background-color: #242526; }
 .dark #message-input { background-color: #3a3b3c; border-color: #4e4f50; }
 .dark .bg-gray-200 { background-color: #3a3b3c; }
-.dark .text-gray-700 { color: #e4e6eb; }
+/* .dark .text-gray-700 { color: #e4e6eb; } */
 .dark .bg-gray-100 { background-color: #1c1e21; }
 .dark aside { background-color: #1c1e21; }
 .dark aside div { background-color: #1c1e21; }
 .dark #startup-prompt { background-color: rgba(10,10,10,0.7); }
+.dark .bg-gray-200.text-gray-700 {
+    color: #e4e6eb;
+}
