@@ -211,7 +211,7 @@ function initializeOnlineFeatures() {
         // onlineUsersEl.textContent = onlineCount;
     }, (error) => {
         console.error("Error getting online users count:", error);
-        onlineUsersEl.textContent = 'N/A';
+        // onlineUsersEl.textContent = 'N/A';
     });
 }
 
@@ -228,11 +228,14 @@ async function updateUserHeartbeat() {
 }
 
 window.addEventListener('beforeunload', (event) => {
+    // This function is key to handling disconnections on page refresh/close.
     if (currentChatId && !isChatDisconnected) {
         const chatDocRef = doc(db, "chats", currentChatId);
+        // We mark the chat with the ID of the user who is leaving.
         updateDoc(chatDocRef, { disconnected: currentUser.uid });
     }
     
+    // Clean up user status and queue documents.
     if (currentUser) {
         if (queueListener) {
              deleteDoc(doc(db, "queue", currentUser.uid));
@@ -517,7 +520,7 @@ function listenForMessages(chatId) {
     messageListener = onSnapshot(chatDocRef, (docSnap) => {
         const data = docSnap.data();
         if (data) {
-            // REVERTED: Check if stranger disconnected and show post-chat actions.
+            // This is where we listen for the 'disconnected' flag.
             if (data.disconnected && data.disconnected !== currentUser.uid && !isChatDisconnected) {
                 showPostChatActions("Stranger has ended the chat.");
             }
