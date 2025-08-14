@@ -526,7 +526,8 @@ async function loadOlderMessages() {
         messages.push({id: doc.id, ...doc.data()});
     });
     
-    messages.reverse().forEach(msg => {
+    // BUG FIX: Do NOT reverse the array here.
+    messages.forEach(msg => {
         displayMessage(msg, true);
     });
 
@@ -543,15 +544,10 @@ function listenForMessages(chatId) {
     const q = query(messagesRef, orderBy("timestamp", "desc"), limit(20));
 
     messagesListener = onSnapshot(q, (snapshot) => {
-        // Only re-render everything if it's the initial load or a new message from the other user.
-        // This prevents the user's own new messages from causing a full re-render.
         const isInitialLoad = !lastVisibleMessage;
-        const hasNewStrangerMessage = snapshot.docChanges().some(change => 
-            change.type === 'added' && change.doc.data().senderId !== currentUser.uid
-        );
 
-        if (isInitialLoad || hasNewStrangerMessage) {
-            messagesContainer.innerHTML = ''; // Clear container
+        if (isInitialLoad) {
+            messagesContainer.innerHTML = ''; // Clear container for the first load
 
             if (snapshot.size === 20) {
                 allMessagesLoaded = false;
@@ -564,34 +560,28 @@ function listenForMessages(chatId) {
             } else {
                 allMessagesLoaded = true;
             }
-
-            if (!snapshot.empty) {
-                lastVisibleMessage = snapshot.docs[snapshot.docs.length - 1];
-            }
-
-            const messages = [];
-            snapshot.forEach(doc => {
-                messages.push({id: doc.id, ...doc.data()});
-            });
-            
-            messages.reverse().forEach(msg => {
-                displayMessage(msg);
-            });
-            
-            if (isInitialLoad) {
-                messagesContainer.scrollTop = messagesContainer.scrollHeight;
-            }
         }
 
-        // Always append the user's own new messages to avoid re-rendering flicker
+        if (!snapshot.empty) {
+            lastVisibleMessage = snapshot.docs[snapshot.docs.length - 1];
+        }
+
+        const messages = [];
         snapshot.docChanges().forEach(change => {
-            if (change.type === 'added' && change.doc.data().senderId === currentUser.uid) {
-                if (!document.querySelector(`[data-id="${change.doc.id}"]`)) {
-                    displayMessage({id: change.doc.id, ...change.doc.data()});
-                    messagesContainer.scrollTop = messagesContainer.scrollHeight;
-                }
+            if (change.type === 'added') {
+                messages.push({id: change.doc.id, ...change.doc.data()});
             }
         });
+        
+        messages.reverse().forEach(msg => {
+            if (!document.querySelector(`[data-id="${msg.id}"]`)) {
+                displayMessage(msg, !isInitialLoad);
+            }
+        });
+        
+        if (isInitialLoad) {
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
     });
 }
 
