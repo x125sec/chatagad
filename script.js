@@ -91,6 +91,13 @@ const leftAd = document.getElementById('left-ad');
 const rightAd = document.getElementById('right-ad');
 const addInterestBtn = document.getElementById('add-interest-btn');
 
+// --- Input Sanitization ---
+function sanitize(text) {
+  const temp = document.createElement('div');
+  temp.textContent = text;
+  return temp.innerHTML;
+}
+
 // --- Mobile Viewport Height Fix ---
 function setScreenHeight() {
     let vh = window.innerHeight * 0.01;
@@ -228,14 +235,11 @@ async function updateUserHeartbeat() {
 }
 
 window.addEventListener('beforeunload', (event) => {
-    // This function is key to handling disconnections on page refresh/close.
     if (currentChatId && !isChatDisconnected) {
         const chatDocRef = doc(db, "chats", currentChatId);
-        // We mark the chat with the ID of the user who is leaving.
         updateDoc(chatDocRef, { disconnected: currentUser.uid });
     }
     
-    // Clean up user status and queue documents.
     if (currentUser) {
         if (queueListener) {
              deleteDoc(doc(db, "queue", currentUser.uid));
@@ -259,7 +263,8 @@ function loadInterests() {
 }
 
 function addInterestFromInput() {
-    const interest = interestInput.value.trim().toLowerCase();
+    const rawInterest = interestInput.value.trim().toLowerCase();
+    const interest = sanitize(rawInterest); // Sanitize the interest
     if (interest && !interests.includes(interest)) {
         interests.push(interest);
         renderInterests();
@@ -491,8 +496,10 @@ function handleTyping() {
 }
 
 async function sendMessage() {
-    const text = messageInput.value.trim();
-    if (text === '' || !currentChatId) return;
+    const rawText = messageInput.value.trim();
+    if (rawText === '' || !currentChatId) return;
+
+    const text = sanitize(rawText); // Sanitize the message
     
     clearTimeout(typingTimeout);
     updateTypingStatus(false);
@@ -501,7 +508,7 @@ async function sendMessage() {
         const messagesRef = collection(db, "chats", currentChatId, "messages");
         await addDoc(messagesRef, {
             senderId: currentUser.uid,
-            text: text,
+            text: text, // Use the sanitized text
             timestamp: serverTimestamp()
         });
         messageInput.value = '';
@@ -520,7 +527,6 @@ function listenForMessages(chatId) {
     messageListener = onSnapshot(chatDocRef, (docSnap) => {
         const data = docSnap.data();
         if (data) {
-            // This is where we listen for the 'disconnected' flag.
             if (data.disconnected && data.disconnected !== currentUser.uid && !isChatDisconnected) {
                 showPostChatActions("Stranger has ended the chat.");
             }
