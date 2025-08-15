@@ -1,0 +1,6 @@
+# Allow all friendly search engine crawlers to access the site
+User-agent: *
+Allow: /
+
+# Specify the location of the sitemap for crawlers
+Sitemap: https://chatagad.com/sitemap.xml
