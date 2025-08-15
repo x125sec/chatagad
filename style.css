@@ -68,10 +68,12 @@ body {
     40% { transform: scale(1.0); }
 }
 
-/* Move reCAPTCHA badge to the bottom-left */
+/* Move reCAPTCHA badge to the top-right */
 .grecaptcha-badge { 
-    bottom: 90px !important; 
-    left: 15px !important;
+    top: 15px !important; 
+    right: 15px !important;
+    bottom: auto !important;
+    left: auto !important;
 }
 
 
