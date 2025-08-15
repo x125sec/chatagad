@@ -68,6 +68,13 @@ body {
     40% { transform: scale(1.0); }
 }
 
+/* Move reCAPTCHA badge to the bottom-left */
+.grecaptcha-badge { 
+    bottom: 90px !important; 
+    left: 15px !important;
+}
+
+
 /* Dark Mode Styles */
 .dark body { background-color: #1c1e21; color: #e4e6eb; }
 .dark #main-container { background-color: #242526; box-shadow: 0 0 15px rgba(0,0,0,0.5); }
