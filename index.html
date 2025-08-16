@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta name="google-site-verification" content="AnYzm2LrFcDUrTl9fZjwdI10GaaMENTT38FqbrBwrHI" />
-    <meta charset="UTF-8">
+    <meta charset="UTF--8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     <!-- SEO Meta Tags -->
@@ -29,7 +29,7 @@
     
     <!-- Favicon Links -->
     <link rel="icon" href="/favicon.ico" sizes="any">
-    <link rel="icon" href="/logo.svg" type="image/svg+xml">
+    <link rel="icon" href="/media/main-logo.svg" type="image/svg+xml">
     <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 
     <!-- App Check reCAPTCHA script -->
@@ -83,7 +83,11 @@
         <div id="home-screen" class="w-full h-full flex flex-col">
             <div class="p-4 border-b border-gray-200 shadow-sm header-bar">
                 <div class="flex justify-between items-center w-full max-w-5xl mx-auto">
-                    <h1 class="text-3xl md:text-4xl font-extrabold text-blue-600">ChatAgad</h1>
+                    <!-- LOGO AND TEXT ARE NOW A CLICKABLE LINK -->
+                    <a href="/" class="flex items-center space-x-3">
+                        <img src="media/main-logo.svg" alt="ChatAgad Logo" class="h-10">
+                        <h1 class="text-3xl md:text-4xl font-extrabold text-blue-600">ChatAgad</h1>
+                    </a>
                     <div class="flex items-center space-x-4">
                         
                         <button id="theme-toggle-btn-home" class="p-2 rounded-full bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-200 transition-transform transform hover:scale-110">
@@ -94,6 +98,8 @@
                 </div>
             </div>
             <div class="flex-1 flex flex-col items-center justify-center text-center p-4">
+                 <!-- YOU CAN ADD A BRANDING IMAGE HERE -->
+                <img src="https://placehold.co/400x200/E7F3FF/1877F2?text=Your+Image+Here" alt="Welcome to ChatAgad" class="mb-8 rounded-lg">
                 <p class="text-lg text-gray-600 tracking-tight">Connect with strangers anonymously based on your interests.</p>
 
                 <div class="mt-8 max-w-lg mx-auto w-full">
@@ -123,7 +129,11 @@
         <div id="chat-screen" class="hidden w-full h-full flex flex-col">
              <div class="p-4 border-b border-gray-200 shadow-sm header-bar flex-shrink-0">
                  <div class="flex justify-between items-center w-full max-w-5xl mx-auto">
-                    <h1 class="text-3xl md:text-4xl font-extrabold text-blue-600">ChatAgad</h1>
+                    <!-- LOGO AND TEXT ARE NOW A CLICKABLE LINK -->
+                    <a href="/" class="flex items-center space-x-3">
+                        <img src="media/main-logo.svg" alt="ChatAgad Logo" class="h-10">
+                        <h1 class="text-3xl md:text-4xl font-extrabold text-blue-600">ChatAgad</h1>
+                    </a>
                     <button id="theme-toggle-btn-chat" class="p-2 rounded-full bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-200 transition-transform transform hover:scale-110">
                         <svg id="sun-icon-chat" class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 14.95a1 1 0 010-1.414l.707-.707a1 1 0 011.414 1.414l-.707.707a1 1 0 01-1.414 0zM5 11a1 1 0 100-2H4a1 1 0 100 2h1z"/></svg>
                         <svg id="moon-icon-chat" class="w-5 h-5 hidden" fill="currentColor" viewBox="0 0 20 20"><path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path></svg>
