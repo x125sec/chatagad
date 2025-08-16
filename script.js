@@ -142,37 +142,56 @@ function initializeStartupPrompt() {
     }
 }
 
-// --- Main Application Logic ---
-async function main() {
+// --- Main Application Logic (runs after terms are accepted) ---
+function main() {
+    // This function now only prepares the UI.
+    // Firebase connection is delayed until the user clicks "Start Chat".
+    loadInterests();
+    startChatBtn.disabled = false;
+    startChatBtn.textContent = "Start Chat";
+}
+
+// --- NEW: Handles the one-time Firebase connection ---
+async function initializeFirebaseConnection() {
+    // If we are already signed in, we don't need to do anything.
+    if (currentUser) return true;
+
     startChatBtn.disabled = true;
     startChatBtn.textContent = "Connecting...";
+
     try {
-        if (auth.currentUser) {
-            currentUser = auth.currentUser;
-        } else {
-            const userCredential = await signInAnonymously(auth);
-            currentUser = userCredential.user;
-        }
+        const userCredential = await signInAnonymously(auth);
+        currentUser = userCredential.user;
         console.log(`[User ${currentUser.uid.substring(0,5)}] Signed in.`);
         
-        loadInterests();
+        // Now that we are signed in, start the online presence features.
         initializeOnlineFeatures();
-        
         await updateUserHeartbeat();
         setInterval(updateUserHeartbeat, 30000); 
 
         startChatBtn.disabled = false;
         startChatBtn.textContent = "Start Chat";
+        return true; // Indicate success
 
     } catch (error) {
         console.error("Authentication failed:", error);
-        let errorMessage = '<div class="text-center text-red-500 p-8">Could not connect to the server. Please refresh the page.</div>';
+        startChatBtn.disabled = false;
+        startChatBtn.textContent = "Start Chat";
+        
+        let errorMessage = '<div id="connection-error" class="text-center text-red-500 p-4">Could not connect to the server. Please try again.</div>';
         if (error.code === 'auth/network-request-failed') {
-            errorMessage = '<div class="text-center text-red-500 p-8"><strong>Network Error:</strong> Could not connect to authentication services. Please check your internet connection, disable any ad-blockers, and refresh the page.</div>';
+            errorMessage = '<div id="connection-error" class="text-center text-red-500 p-4"><strong>Network Error:</strong> Could not connect. Please check your internet connection, disable any ad-blockers, and try again.</div>';
         }
-        mainContainer.innerHTML = errorMessage;
+        // Display error message above the interests section
+        const homeScreenContent = document.querySelector('#home-screen > .flex-1');
+        const existingError = document.getElementById('connection-error');
+        if (existingError) existingError.remove();
+        homeScreenContent.insertAdjacentHTML('afterbegin', errorMessage);
+
+        return false; // Indicate failure
     }
 }
+
 
 function initializeOnlineFeatures() {
     if (onlineCountListener) return;
@@ -267,9 +286,13 @@ function renderInterests() {
 
 // --- Chat Logic ---
 async function startSearch() {
-    if (!currentUser) {
-        return;
+    // First, ensure we have a Firebase connection.
+    const isConnected = await initializeFirebaseConnection();
+    if (!isConnected) {
+        console.log("Cannot start search, Firebase connection failed.");
+        return; // Stop if connection failed.
     }
+
     homeScreen.classList.add('hidden');
     loadingScreen.classList.remove('hidden');
     loadingMessage.textContent = 'Looking for someone to chat with...';
@@ -581,8 +604,8 @@ function listenForChatStatus(chatId) {
     if (chatStatusListener) chatStatusListener(); 
 
     const chatDocRef = doc(db, "chats", chatId);
-    chatStatusListener = onSnapshot(chatDocRef, (docSnap) => {
-        const data = docSnap.data();
+    chatStatusListener = onSnapshot(docSnap, (doc) => {
+        const data = doc.data();
         if (data) {
             if (data.disconnected && data.disconnected !== currentUser.uid && !isChatDisconnected) {
                 showPostChatActions("Stranger has ended the chat.");
