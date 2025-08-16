@@ -82,18 +82,6 @@ body {
     padding: 2px; /* A little space around the logo */
 }
 
-/* Light/Dark Mode Logo Switching */
-.dark-logo {
-    display: none; /* Hide dark logo by default */
-}
-.dark .light-logo {
-    display: none; /* Hide light logo in dark mode */
-}
-.dark .dark-logo {
-    display: block; /* Show dark logo in dark mode */
-}
-
-
 /* Dark Mode Styles */
 .dark body { background-color: #1c1e21; color: #e4e6eb; }
 .dark #main-container { background-color: #242526; box-shadow: 0 0 15px rgba(0,0,0,0.5); }
