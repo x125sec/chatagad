@@ -75,6 +75,16 @@ body {
     bottom: 15px !important;
 }
 
+/* Logo Styles */
+.logo-circle {
+    border-radius: 50%;
+    border: 2px solid #e5e7eb; /* A light gray border */
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05); /* A subtle shadow */
+    object-fit: cover; /* Ensures the image covers the area without distortion */
+    padding: 2px; /* Adds a little space between the logo and the border */
+    background-color: white; /* Ensures the background is white */
+}
+
 
 /* Dark Mode Styles */
 .dark body { background-color: #1c1e21; color: #e4e6eb; }
@@ -100,4 +110,8 @@ body {
 .dark #startup-prompt { background-color: rgba(10,10,10,0.7); }
 .dark .bg-gray-200.text-gray-700 {
     color: #e4e6eb;
+}
+.dark .logo-circle {
+    border-color: #4e4f50; /* A darker border for dark mode */
+    background-color: #3a3b3c;
 }
