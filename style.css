@@ -75,11 +75,19 @@ body {
     bottom: 15px !important;
 }
 
+/* Styles for the logo background */
+.logo-bg {
+    background-color: white;
+    border-radius: 8px; /* Rounded corners */
+    padding: 2px; /* A little space around the logo */
+}
+
+
 /* Dark Mode Styles */
 .dark body { background-color: #1c1e21; color: #e4e6eb; }
 .dark #main-container { background-color: #242526; box-shadow: 0 0 15px rgba(0,0,0,0.5); }
 .dark .text-blue-600 { color: #4b9cff; }
-.dark #online-counter, .dark .header-bar { background-color: #3a3b3c; border-color: #4e4f50; }
+.dark .header-bar { background-color: #3a3b3c; border-color: #4e4f50; }
 .dark .text-gray-800 { color: #e4e6eb; }
 .dark .text-gray-600, .dark .text-gray-500 { color: #b0b3b8; }
 .dark .text-gray-700 { color: #dadde1; }
@@ -92,11 +100,14 @@ body {
 .dark #chat-screen .bg-white { background-color: #242526; }
 .dark #message-input { background-color: #3a3b3c; border-color: #4e4f50; }
 .dark .bg-gray-200 { background-color: #3a3b3c; }
-/* .dark .text-gray-700 { color: #e4e6eb; } */
 .dark .bg-gray-100 { background-color: #1c1e21; }
 .dark aside { background-color: #1c1e21; }
 .dark aside div { background-color: #1c1e21; }
 .dark #startup-prompt { background-color: rgba(10,10,10,0.7); }
 .dark .bg-gray-200.text-gray-700 {
     color: #e4e6eb;
+}
+/* The logo background remains white in dark mode for contrast */
+.dark .logo-bg {
+    background-color: white;
 }
