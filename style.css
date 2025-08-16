@@ -69,7 +69,7 @@ body {
 }
 
 /* Resize and position the reCAPTCHA badge */
-.grecaptcha-badge { 
+.grecaptcha-badge {
     transform: scale(0.7) !important;
     transform-origin: bottom right !important;
     bottom: 15px !important;
@@ -80,6 +80,17 @@ body {
     background-color: white;
     border-radius: 8px; /* Rounded corners */
     padding: 2px; /* A little space around the logo */
+}
+
+/* Light/Dark Mode Logo Switching */
+.dark-logo {
+    display: none; /* Hide dark logo by default */
+}
+.dark .light-logo {
+    display: none; /* Hide light logo in dark mode */
+}
+.dark .dark-logo {
+    display: block; /* Show dark logo in dark mode */
 }
 
 
