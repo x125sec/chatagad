@@ -6,7 +6,7 @@ html, body {
 }
 body {
     font-family: 'Segoe UI', 'Inter', sans-serif;
-    transition: background-color 0.3s, color 0.3s;
+    transition: background-color: 0.3s, color 0.3s;
 }
 #main-container {
     height: 100vh; /* Fallback for older browsers */
@@ -69,7 +69,7 @@ body {
 }
 
 /* Resize and position the reCAPTCHA badge */
-.grecaptcha-badge {
+.grecaptcha-badge { 
     transform: scale(0.7) !important;
     transform-origin: bottom right !important;
     bottom: 15px !important;
